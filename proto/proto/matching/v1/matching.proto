@@ -1,0 +1,226 @@
+syntax = "proto3";
+
+package berusmenu.matching.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "gitlab.com/berusmenu/proto/gen/go/matching/v1;matchingv1";
+
+message Vacancy {
+  int64 id = 1;
+  int64 owner_id = 2;
+  int64 pvz_id = 3;
+  berusmenu.common.v1.VacancyStatus status = 4;
+  optional string title = 5;
+  optional string description = 6;
+  string shift_date = 7;
+  optional string shift_start_at = 8;
+  optional string shift_end_at = 9;
+  int64 pay_amount = 10;
+  int32 slots_total = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+message Response {
+  int64 id = 1;
+  int64 vacancy_id = 2;
+  int64 worker_id = 3;
+  berusmenu.common.v1.ResponseStatus status = 4;
+  optional string message = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message Assignment {
+  int64 id = 1;
+  int64 vacancy_id = 2;
+  int64 response_id = 3;
+  int64 owner_id = 4;
+  int64 worker_id = 5;
+  berusmenu.common.v1.AssignmentStatus status = 6;
+  google.protobuf.Timestamp accepted_at = 7;
+  string pvz_name_snapshot = 8;
+  string pvz_address_snapshot = 9;
+  string shift_date_snapshot = 10;
+  int64 pay_amount_snapshot = 11;
+  optional string shift_start_at_snapshot = 12;
+  optional string shift_end_at_snapshot = 13;
+  string owner_name_snapshot = 14;
+  string worker_name_snapshot = 15;
+  optional google.protobuf.Timestamp completed_at = 16;
+  optional google.protobuf.Timestamp cancelled_at = 17;
+  optional int64 cancelled_by_user_id = 18;
+  optional string cancel_reason = 19;
+  google.protobuf.Timestamp updated_at = 20;
+  google.protobuf.Timestamp created_at = 21;
+}
+
+message Review {
+  int64 id = 1;
+  int64 assignment_id = 2;
+  int64 author_user_id = 3;
+  int64 target_user_id = 4;
+  berusmenu.common.v1.ReviewTargetRole target_role = 5;
+  int32 rating = 6;
+  optional string body = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message ReviewReply {
+  int64 id = 1;
+  int64 review_id = 2;
+  int64 author_user_id = 3;
+  int64 target_user_id = 4;
+  string body = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message CreateVacancyRequest {
+  int64 pvz_id = 1;
+  optional string title = 2;
+  optional string description = 3;
+  string shift_date = 4;
+  optional string shift_start_at = 5;
+  optional string shift_end_at = 6;
+  int64 pay_amount = 7;
+  int32 slots_total = 8;
+}
+
+message CreateVacancyResponse {
+  Vacancy vacancy = 1;
+}
+
+message GetVacancyRequest {
+  int64 id = 1;
+}
+
+message GetVacancyResponse {
+  Vacancy vacancy = 1;
+}
+
+message ListVacanciesRequest {
+  optional int64 pvz_id = 1;
+  optional string shift_date_from = 2;
+  optional string shift_date_to = 3;
+  optional berusmenu.common.v1.VacancyStatus status = 4;
+  int32 page_size = 5;
+  optional string page_token = 6;
+}
+
+message ListVacanciesResponse {
+  repeated Vacancy items = 1;
+  optional string next_page_token = 2;
+}
+
+message ListOwnerVacanciesRequest {
+  optional berusmenu.common.v1.VacancyStatus status = 1;
+  int32 page_size = 2;
+  optional string page_token = 3;
+}
+
+message ListOwnerVacanciesResponse {
+  repeated Vacancy items = 1;
+  optional string next_page_token = 2;
+}
+
+message CreateResponseRequest {
+  int64 vacancy_id = 1;
+  optional string message = 2;
+}
+
+message CreateResponseResponse {
+  Response response = 1;
+}
+
+message WithdrawResponseRequest {
+  int64 response_id = 1;
+}
+
+message WithdrawResponseResponse {
+  Response response = 1;
+}
+
+message ListResponsesForVacancyRequest {
+  int64 vacancy_id = 1;
+  int32 page_size = 2;
+  optional string page_token = 3;
+}
+
+message ListResponsesForVacancyResponse {
+  repeated Response items = 1;
+  optional string next_page_token = 2;
+}
+
+message AcceptResponseRequest {
+  int64 response_id = 1;
+}
+
+message AcceptResponseResponse {
+  Assignment assignment = 1;
+}
+
+message CancelAssignmentRequest {
+  int64 assignment_id = 1;
+  optional string cancel_reason = 2;
+}
+
+message CancelAssignmentResponse {
+  Assignment assignment = 1;
+}
+
+message CompleteAssignmentRequest {
+  int64 assignment_id = 1;
+}
+
+message CompleteAssignmentResponse {
+  Assignment assignment = 1;
+}
+
+message CreateReviewRequest {
+  int64 assignment_id = 1;
+  int32 rating = 2;
+  optional string body = 3;
+}
+
+message CreateReviewResponse {
+  Review review = 1;
+}
+
+message CreateReviewReplyRequest {
+  int64 review_id = 1;
+  int64 target_user_id = 2;
+  string body = 3;
+}
+
+message CreateReviewReplyResponse {
+  ReviewReply reply = 1;
+}
+
+message ListReviewsRequest {
+  optional int64 target_user_id = 1;
+  int32 page_size = 2;
+  optional string page_token = 3;
+}
+
+message ListReviewsResponse {
+  repeated Review items = 1;
+  optional string next_page_token = 2;
+}
+
+service MatchingService {
+  rpc CreateVacancy(CreateVacancyRequest) returns (CreateVacancyResponse);
+  rpc GetVacancy(GetVacancyRequest) returns (GetVacancyResponse);
+  rpc ListVacancies(ListVacanciesRequest) returns (ListVacanciesResponse);
+  rpc ListOwnerVacancies(ListOwnerVacanciesRequest) returns (ListOwnerVacanciesResponse);
+  rpc CreateResponse(CreateResponseRequest) returns (CreateResponseResponse);
+  rpc WithdrawResponse(WithdrawResponseRequest) returns (WithdrawResponseResponse);
+  rpc ListResponsesForVacancy(ListResponsesForVacancyRequest) returns (ListResponsesForVacancyResponse);
+  rpc AcceptResponse(AcceptResponseRequest) returns (AcceptResponseResponse);
+  rpc CancelAssignment(CancelAssignmentRequest) returns (CancelAssignmentResponse);
+  rpc CompleteAssignment(CompleteAssignmentRequest) returns (CompleteAssignmentResponse);
+  rpc CreateReview(CreateReviewRequest) returns (CreateReviewResponse);
+  rpc CreateReviewReply(CreateReviewReplyRequest) returns (CreateReviewReplyResponse);
+  rpc ListReviews(ListReviewsRequest) returns (ListReviewsResponse);
+}

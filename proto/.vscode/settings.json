@@ -1,0 +1,10 @@
+{
+  "tooltitude.pb.includes": [
+    "${workspaceFolder}/proto",
+    "${workspaceFolder}/third_party/include",
+    "${workspaceFolder}/gen/go/**/*.pb.go",
+    "${workspaceFolder}/gen/go/**/*.pb.gw.go",
+    "${workspaceFolder}/gen/go/**/*.pb.validate.go",
+    "${workspaceFolder}/gen/go/**/*.pb.validate.go",
+  ]
+}

@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package auth.v1;
+
+// Сгенерированный Go-пакет: см. go_package в корневом go.mod.
+option go_package = "gitlab.com/berusmenu/auth-service/gen/auth/v1;authv1";
+
+// Auth — регистрация, сессии (JWT/opaque), проверка токена для внутренних gRPC-вызовов.
+service AuthService {
+  // Регистрация пользователя (email + пароль). Бизнес-валидация — на сервисе.
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Выдача пары access + refresh токенов.
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // Обновление пары токенов по refresh (ротация refresh — на усмотрение реализации).
+  rpc Refresh(RefreshRequest) returns (RefreshResponse);
+
+  // Инвалидация refresh-сессии (и при необходимости связанных данных в Redis).
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+
+  // Проверка access-токена: для BFF/Gateway и межсервисных вызовов без парсинга JWT на клиенте.
+  rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
+}
+
+// --- Register ---
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message RegisterResponse {
+  string user_id = 1;
+}
+
+// --- Login ---
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+  // Необязательно: идентификатор клиента / устройства для аудита и отзыва сессий.
+  string device_id = 3;
+}
+
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  // Unix seconds UTC — удобно кэшировать на клиенте без парсинга JWT.
+  int64 access_expires_at_unix = 3;
+  int64 refresh_expires_at_unix = 4;
+  // Обычно "Bearer"; зафиксировано для совместимости с HTTP Authorization.
+  string token_type = 5;
+}
+
+// --- Refresh ---
+
+message RefreshRequest {
+  string refresh_token = 1;
+}
+
+message RefreshResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 access_expires_at_unix = 3;
+  int64 refresh_expires_at_unix = 4;
+}
+
+// --- Logout ---
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message LogoutResponse {}
+
+// --- Validate ---
+
+message ValidateAccessTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateAccessTokenResponse {
+  bool valid = 1;
+  // Заполняется при valid == true.
+  string user_id = 2;
+  repeated string roles = 3;
+  int64 expires_at_unix = 4;
+}

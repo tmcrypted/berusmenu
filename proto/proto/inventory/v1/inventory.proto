@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package berusmenu.inventory.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "gitlab.com/berusmenu/proto/gen/go/inventory/v1;inventoryv1";
+
+message Pvz {
+  int64 id = 1;
+  int64 owner_id = 2;
+  berusmenu.common.v1.PvzStatus status = 3;
+  string city = 4;
+  string address = 5;
+  string company_name = 6;
+  string contact_phone = 7;
+  optional string contact_telegram = 8;
+  optional string description = 9;
+  optional double lat = 10;
+  optional double lng = 11;
+  optional string rejection_reason = 12;
+  optional int64 moderated_by = 13;
+  optional google.protobuf.Timestamp moderated_at = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+message PvzModerationEvent {
+  int64 id = 1;
+  int64 pvz_id = 2;
+  berusmenu.common.v1.PvzModerationAction action = 3;
+  int64 actor_user_id = 4;
+  optional string comment = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message CreatePvzRequest {
+  string city = 1;
+  string address = 2;
+  string company_name = 3;
+  string contact_phone = 4;
+  optional string contact_telegram = 5;
+  optional string description = 6;
+  optional double lat = 7;
+  optional double lng = 8;
+}
+
+message CreatePvzResponse {
+  Pvz pvz = 1;
+}
+
+message GetPvzRequest {
+  int64 id = 1;
+}
+
+message GetPvzResponse {
+  Pvz pvz = 1;
+}
+
+message ListOwnerPvzRequest {
+  int32 page_size = 1;
+  optional string page_token = 2;
+}
+
+message ListOwnerPvzResponse {
+  repeated Pvz items = 1;
+  optional string next_page_token = 2;
+}
+
+message UpdatePvzRequest {
+  int64 id = 1;
+  optional string city = 2;
+  optional string address = 3;
+  optional string company_name = 4;
+  optional string contact_phone = 5;
+  optional string contact_telegram = 6;
+  optional string description = 7;
+  optional double lat = 8;
+  optional double lng = 9;
+}
+
+message UpdatePvzResponse {
+  Pvz pvz = 1;
+}
+
+message SubmitPvzUpdateRequest {
+  int64 id = 1;
+}
+
+message SubmitPvzUpdateResponse {
+  Pvz pvz = 1;
+}
+
+message ListPendingPvzRequest {
+  int32 page_size = 1;
+  optional string page_token = 2;
+}
+
+message ListPendingPvzResponse {
+  repeated Pvz items = 1;
+  optional string next_page_token = 2;
+}
+
+message ApprovePvzRequest {
+  int64 pvz_id = 1;
+  optional string comment = 2;
+}
+
+message ApprovePvzResponse {
+  Pvz pvz = 1;
+}
+
+message RejectPvzRequest {
+  int64 pvz_id = 1;
+  string reason = 2;
+  optional string comment = 3;
+}
+
+message RejectPvzResponse {
+  Pvz pvz = 1;
+}
+
+message BlockPvzRequest {
+  int64 pvz_id = 1;
+  optional string comment = 2;
+}
+
+message BlockPvzResponse {
+  Pvz pvz = 1;
+}
+
+service InventoryService {
+  rpc CreatePvz(CreatePvzRequest) returns (CreatePvzResponse);
+  rpc GetPvz(GetPvzRequest) returns (GetPvzResponse);
+  rpc ListOwnerPvz(ListOwnerPvzRequest) returns (ListOwnerPvzResponse);
+  rpc UpdatePvz(UpdatePvzRequest) returns (UpdatePvzResponse);
+  rpc SubmitPvzUpdate(SubmitPvzUpdateRequest) returns (SubmitPvzUpdateResponse);
+  rpc ListPendingPvz(ListPendingPvzRequest) returns (ListPendingPvzResponse);
+  rpc ApprovePvz(ApprovePvzRequest) returns (ApprovePvzResponse);
+  rpc RejectPvz(RejectPvzRequest) returns (RejectPvzResponse);
+  rpc BlockPvz(BlockPvzRequest) returns (BlockPvzResponse);
+}

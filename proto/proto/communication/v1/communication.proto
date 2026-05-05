@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package berusmenu.communication.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "gitlab.com/berusmenu/proto/gen/go/communication/v1;communicationv1";
+
+message Conversation {
+  int64 id = 1;
+  int64 response_id = 2;
+  int64 vacancy_id = 3;
+  int64 owner_id = 4;
+  int64 worker_id = 5;
+  optional google.protobuf.Timestamp last_message_at = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message Message {
+  int64 id = 1;
+  int64 conversation_id = 2;
+  int64 sender_user_id = 3;
+  string body = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message MessageRead {
+  int64 id = 1;
+  int64 conversation_id = 2;
+  int64 user_id = 3;
+  optional int64 last_read_message_id = 4;
+  optional google.protobuf.Timestamp read_at = 5;
+}
+
+message CreateConversationForResponseRequest {
+  int64 response_id = 1;
+  int64 vacancy_id = 2;
+  int64 owner_id = 3;
+  int64 worker_id = 4;
+}
+
+message CreateConversationForResponseResponse {
+  Conversation conversation = 1;
+}
+
+message ListConversationsRequest {
+  int32 page_size = 1;
+  optional string page_token = 2;
+}
+
+message ListConversationsResponse {
+  repeated Conversation items = 1;
+  optional string next_page_token = 2;
+}
+
+message ListMessagesRequest {
+  int64 conversation_id = 1;
+  int32 page_size = 2;
+  optional string page_token = 3;
+}
+
+message ListMessagesResponse {
+  repeated Message items = 1;
+  optional string next_page_token = 2;
+}
+
+message SendMessageRequest {
+  int64 conversation_id = 1;
+  string body = 2;
+}
+
+message SendMessageResponse {
+  Message message = 1;
+}
+
+message MarkAsReadRequest {
+  int64 conversation_id = 1;
+  optional int64 last_read_message_id = 2;
+}
+
+message MarkAsReadResponse {
+  MessageRead read_state = 1;
+}
+
+service CommunicationService {
+  rpc CreateConversationForResponse(CreateConversationForResponseRequest) returns (CreateConversationForResponseResponse);
+  rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse);
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse);
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc MarkAsRead(MarkAsReadRequest) returns (MarkAsReadResponse);
+}
