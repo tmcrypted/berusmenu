@@ -83,12 +83,8 @@ services:
       COMMUNICATION_GRPC_ADDR: communication-service:50054
       REQUEST_TIMEOUT: ${REQUEST_TIMEOUT:-5s}
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+      auth-service:
+        condition: service_started
     ports:
       - "${API_GATEWAY_PORT:-8080}:8080"
     networks:
@@ -112,12 +108,30 @@ services:
       - berusmenu
 
   auth-service:
-    profiles: ["future"]
     build:
-      context: ../auth-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: auth-service/Dockerfile
     container_name: berusmenu-auth-service
     restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      GRPC_ADDR: :50051
+      POSTGRES_DSN: postgres://${POSTGRES_USER:-berusmenu}:${POSTGRES_PASSWORD:-berusmenu}@postgres:5432/${POSTGRES_DB:-berusmenu}?sslmode=disable
+      REDIS_ADDR: redis:6379
+      KAFKA_BROKERS: kafka:9092
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-me}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-15m}
+      REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:-720h}
+      MIGRATIONS_DIR: internal/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "${AUTH_GRPC_PORT:-50051}:50051"
     networks:
       - berusmenu
 
@@ -152,12 +166,16 @@ services:
       - berusmenu
 
   notification-service:
-    profiles: ["future"]
     build:
-      context: ../notification-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: notification-service/Dockerfile
     container_name: berusmenu-notification-service
     restart: unless-stopped
+    environment:
+      KAFKA_BROKERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
     networks:
       - berusmenu
 
