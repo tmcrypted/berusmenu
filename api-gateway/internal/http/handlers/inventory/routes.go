@@ -21,7 +21,6 @@ func RegisterRoutes(
 	authorized.GET("/pvz", notImplemented())
 	authorized.GET("/pvz/:id", notImplemented())
 	authorized.PATCH("/pvz/:id", notImplemented())
-	authorized.POST("/pvz/:id/submit-update", notImplemented())
 
 	moderation := authorized.Group("/moderation")
 	moderation.GET("/pvz", notImplemented())

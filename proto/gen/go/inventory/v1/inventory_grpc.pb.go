@@ -19,15 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion8
 
 const (
-	InventoryService_CreatePvz_FullMethodName       = "/berusmenu.inventory.v1.InventoryService/CreatePvz"
-	InventoryService_GetPvz_FullMethodName          = "/berusmenu.inventory.v1.InventoryService/GetPvz"
-	InventoryService_ListOwnerPvz_FullMethodName    = "/berusmenu.inventory.v1.InventoryService/ListOwnerPvz"
-	InventoryService_UpdatePvz_FullMethodName       = "/berusmenu.inventory.v1.InventoryService/UpdatePvz"
-	InventoryService_SubmitPvzUpdate_FullMethodName = "/berusmenu.inventory.v1.InventoryService/SubmitPvzUpdate"
-	InventoryService_ListPendingPvz_FullMethodName  = "/berusmenu.inventory.v1.InventoryService/ListPendingPvz"
-	InventoryService_ApprovePvz_FullMethodName      = "/berusmenu.inventory.v1.InventoryService/ApprovePvz"
-	InventoryService_RejectPvz_FullMethodName       = "/berusmenu.inventory.v1.InventoryService/RejectPvz"
-	InventoryService_BlockPvz_FullMethodName        = "/berusmenu.inventory.v1.InventoryService/BlockPvz"
+	InventoryService_CreatePvz_FullMethodName          = "/berusmenu.inventory.v1.InventoryService/CreatePvz"
+	InventoryService_GetPvz_FullMethodName             = "/berusmenu.inventory.v1.InventoryService/GetPvz"
+	InventoryService_ListOwnerPvz_FullMethodName       = "/berusmenu.inventory.v1.InventoryService/ListOwnerPvz"
+	InventoryService_UpdatePvz_FullMethodName          = "/berusmenu.inventory.v1.InventoryService/UpdatePvz"
+	InventoryService_CheckPvzForVacancy_FullMethodName = "/berusmenu.inventory.v1.InventoryService/CheckPvzForVacancy"
+	InventoryService_ListPendingPvz_FullMethodName     = "/berusmenu.inventory.v1.InventoryService/ListPendingPvz"
+	InventoryService_ApprovePvz_FullMethodName         = "/berusmenu.inventory.v1.InventoryService/ApprovePvz"
+	InventoryService_RejectPvz_FullMethodName          = "/berusmenu.inventory.v1.InventoryService/RejectPvz"
+	InventoryService_BlockPvz_FullMethodName           = "/berusmenu.inventory.v1.InventoryService/BlockPvz"
 )
 
 // InventoryServiceClient is the client API for InventoryService service.
@@ -38,7 +38,7 @@ type InventoryServiceClient interface {
 	GetPvz(ctx context.Context, in *GetPvzRequest, opts ...grpc.CallOption) (*GetPvzResponse, error)
 	ListOwnerPvz(ctx context.Context, in *ListOwnerPvzRequest, opts ...grpc.CallOption) (*ListOwnerPvzResponse, error)
 	UpdatePvz(ctx context.Context, in *UpdatePvzRequest, opts ...grpc.CallOption) (*UpdatePvzResponse, error)
-	SubmitPvzUpdate(ctx context.Context, in *SubmitPvzUpdateRequest, opts ...grpc.CallOption) (*SubmitPvzUpdateResponse, error)
+	CheckPvzForVacancy(ctx context.Context, in *CheckPvzForVacancyRequest, opts ...grpc.CallOption) (*CheckPvzForVacancyResponse, error)
 	ListPendingPvz(ctx context.Context, in *ListPendingPvzRequest, opts ...grpc.CallOption) (*ListPendingPvzResponse, error)
 	ApprovePvz(ctx context.Context, in *ApprovePvzRequest, opts ...grpc.CallOption) (*ApprovePvzResponse, error)
 	RejectPvz(ctx context.Context, in *RejectPvzRequest, opts ...grpc.CallOption) (*RejectPvzResponse, error)
@@ -93,10 +93,10 @@ func (c *inventoryServiceClient) UpdatePvz(ctx context.Context, in *UpdatePvzReq
 	return out, nil
 }
 
-func (c *inventoryServiceClient) SubmitPvzUpdate(ctx context.Context, in *SubmitPvzUpdateRequest, opts ...grpc.CallOption) (*SubmitPvzUpdateResponse, error) {
+func (c *inventoryServiceClient) CheckPvzForVacancy(ctx context.Context, in *CheckPvzForVacancyRequest, opts ...grpc.CallOption) (*CheckPvzForVacancyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SubmitPvzUpdateResponse)
-	err := c.cc.Invoke(ctx, InventoryService_SubmitPvzUpdate_FullMethodName, in, out, cOpts...)
+	out := new(CheckPvzForVacancyResponse)
+	err := c.cc.Invoke(ctx, InventoryService_CheckPvzForVacancy_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ type InventoryServiceServer interface {
 	GetPvz(context.Context, *GetPvzRequest) (*GetPvzResponse, error)
 	ListOwnerPvz(context.Context, *ListOwnerPvzRequest) (*ListOwnerPvzResponse, error)
 	UpdatePvz(context.Context, *UpdatePvzRequest) (*UpdatePvzResponse, error)
-	SubmitPvzUpdate(context.Context, *SubmitPvzUpdateRequest) (*SubmitPvzUpdateResponse, error)
+	CheckPvzForVacancy(context.Context, *CheckPvzForVacancyRequest) (*CheckPvzForVacancyResponse, error)
 	ListPendingPvz(context.Context, *ListPendingPvzRequest) (*ListPendingPvzResponse, error)
 	ApprovePvz(context.Context, *ApprovePvzRequest) (*ApprovePvzResponse, error)
 	RejectPvz(context.Context, *RejectPvzRequest) (*RejectPvzResponse, error)
@@ -175,8 +175,8 @@ func (UnimplementedInventoryServiceServer) ListOwnerPvz(context.Context, *ListOw
 func (UnimplementedInventoryServiceServer) UpdatePvz(context.Context, *UpdatePvzRequest) (*UpdatePvzResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePvz not implemented")
 }
-func (UnimplementedInventoryServiceServer) SubmitPvzUpdate(context.Context, *SubmitPvzUpdateRequest) (*SubmitPvzUpdateResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SubmitPvzUpdate not implemented")
+func (UnimplementedInventoryServiceServer) CheckPvzForVacancy(context.Context, *CheckPvzForVacancyRequest) (*CheckPvzForVacancyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckPvzForVacancy not implemented")
 }
 func (UnimplementedInventoryServiceServer) ListPendingPvz(context.Context, *ListPendingPvzRequest) (*ListPendingPvzResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPendingPvz not implemented")
@@ -275,20 +275,20 @@ func _InventoryService_UpdatePvz_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InventoryService_SubmitPvzUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SubmitPvzUpdateRequest)
+func _InventoryService_CheckPvzForVacancy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckPvzForVacancyRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InventoryServiceServer).SubmitPvzUpdate(ctx, in)
+		return srv.(InventoryServiceServer).CheckPvzForVacancy(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: InventoryService_SubmitPvzUpdate_FullMethodName,
+		FullMethod: InventoryService_CheckPvzForVacancy_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InventoryServiceServer).SubmitPvzUpdate(ctx, req.(*SubmitPvzUpdateRequest))
+		return srv.(InventoryServiceServer).CheckPvzForVacancy(ctx, req.(*CheckPvzForVacancyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -389,8 +389,8 @@ var InventoryService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _InventoryService_UpdatePvz_Handler,
 		},
 		{
-			MethodName: "SubmitPvzUpdate",
-			Handler:    _InventoryService_SubmitPvzUpdate_Handler,
+			MethodName: "CheckPvzForVacancy",
+			Handler:    _InventoryService_CheckPvzForVacancy_Handler,
 		},
 		{
 			MethodName: "ListPendingPvz",

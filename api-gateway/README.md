@@ -77,7 +77,7 @@ go test ./...
 
 ## Notes
 
-- `gitlab.com/berusmenu/proto` is connected through `replace => ../proto`
+- `gitlab.com/berusmenu/proto` is resolved locally through `replace => ../proto`
 - gateway forwards identity through gRPC metadata
 - gateway should stay thin; domain rules stay in owning services
 - built-in OpenAPI JSON is served from `/openapi.json`

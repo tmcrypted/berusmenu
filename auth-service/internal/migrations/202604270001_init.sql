@@ -6,11 +6,11 @@ CREATE TABLE IF NOT EXISTS auth.users (
     email TEXT NOT NULL UNIQUE,
     email_verified_at TIMESTAMPTZ NULL,
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('owner', 'worker', 'moderator')),
     full_name TEXT NOT NULL,
     phone TEXT NULL,
     avatar_url TEXT NULL,
-    status TEXT NOT NULL DEFAULT 'active',
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'blocked')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

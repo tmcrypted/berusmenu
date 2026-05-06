@@ -309,10 +309,7 @@ func paths() map[string]any {
 		},
 		"/v1/pvz/{id}": map[string]any{
 			"get":   notImplementedOp("PVZ", "Get PVZ by ID"),
-			"patch": notImplementedOp("PVZ", "Patch PVZ"),
-		},
-		"/v1/pvz/{id}/submit-update": map[string]any{
-			"post": notImplementedOp("PVZ", "Submit PVZ update"),
+			"patch": notImplementedOp("PVZ", "Update PVZ and resubmit moderation"),
 		},
 		"/v1/moderation/pvz": map[string]any{
 			"get": notImplementedOp("Moderation", "List PVZ moderation queue"),

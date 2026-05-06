@@ -84,12 +84,19 @@ message UpdatePvzResponse {
   Pvz pvz = 1;
 }
 
-message SubmitPvzUpdateRequest {
-  int64 id = 1;
+message VacancyPvzSnapshot {
+  int64 pvz_id = 1;
+  int64 owner_id = 2;
+  string company_name = 3;
+  string address = 4;
 }
 
-message SubmitPvzUpdateResponse {
-  Pvz pvz = 1;
+message CheckPvzForVacancyRequest {
+  int64 pvz_id = 1;
+}
+
+message CheckPvzForVacancyResponse {
+  VacancyPvzSnapshot pvz = 1;
 }
 
 message ListPendingPvzRequest {
@@ -135,7 +142,7 @@ service InventoryService {
   rpc GetPvz(GetPvzRequest) returns (GetPvzResponse);
   rpc ListOwnerPvz(ListOwnerPvzRequest) returns (ListOwnerPvzResponse);
   rpc UpdatePvz(UpdatePvzRequest) returns (UpdatePvzResponse);
-  rpc SubmitPvzUpdate(SubmitPvzUpdateRequest) returns (SubmitPvzUpdateResponse);
+  rpc CheckPvzForVacancy(CheckPvzForVacancyRequest) returns (CheckPvzForVacancyResponse);
   rpc ListPendingPvz(ListPendingPvzRequest) returns (ListPendingPvzResponse);
   rpc ApprovePvz(ApprovePvzRequest) returns (ApprovePvzResponse);
   rpc RejectPvz(RejectPvzRequest) returns (RejectPvzResponse);
