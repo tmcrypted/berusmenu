@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.com/berusmenu/api-gateway/internal/http/response"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/http/response"
 )
 
 const requestIDHeader = "X-Request-ID"

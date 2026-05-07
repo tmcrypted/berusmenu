@@ -4,13 +4,13 @@
 
 Этот документ фиксирует итоговый design baseline для MVP. Подробности вынесены в специализированные разделы:
 
-- [Sequence Diagrams](C:/Users/tmcrypted/Desktop/berusmenu/docs/sequence-diagrams.md)
-- [State Transitions](C:/Users/tmcrypted/Desktop/berusmenu/docs/state-transitions.md)
-- [Permissions](C:/Users/tmcrypted/Desktop/berusmenu/docs/permissions.md)
-- [Interfaces](C:/Users/tmcrypted/Desktop/berusmenu/docs/interfaces.md)
-- [Events And Cache](C:/Users/tmcrypted/Desktop/berusmenu/docs/events-and-cache.md)
-- [Runtime Topology](C:/Users/tmcrypted/Desktop/berusmenu/docs/runtime-topology.md)
-- [Development Plan](C:/Users/tmcrypted/Desktop/berusmenu/docs/development-plan.md)
+- [Sequence Diagrams](sequence-diagrams.md)
+- [State Transitions](state-transitions.md)
+- [Permissions](permissions.md)
+- [Interfaces](interfaces.md)
+- [Events And Cache](events-and-cache.md)
+- [Runtime Topology](runtime-topology.md)
+- [Development Plan](development-plan.md)
 
 ## Product Goal
 
@@ -19,6 +19,7 @@
 ## Must-have scope
 
 - регистрация и логин по email/password
+- HttpOnly cookie based web auth with CSRF protection
 - email verification code
 - PVZ registration and moderation
 - vacancy creation
@@ -44,7 +45,7 @@
 - `postgres`
 - `redis`
 - `kafka`
-- `Mailganer`
+- email sender abstraction
 
 ## Persisted Data
 
@@ -81,19 +82,24 @@
 - reviews are allowed after `completed` or `cancelled`
 - replies belong only to root reviews and have one nesting level only
 - chat is read-only after assignment finalization
-- PVZ updates require repeated moderation
-- submit PVZ update is forbidden when there are active vacancy with statuses `published` and `assigned`
+- PVZ updates directly mutate `inventory.pvz`, set PVZ back to `pending`, and require repeated moderation
+- PVZ update is forbidden when there are active vacancy with statuses `published` and `assigned`
 - new vacancy cannot be created while PVZ is not `approved`
+- Gateway stays thin; cross-domain business checks are synchronous RPCs owned by domain services
 
 ## Auth Rules
 
-- user gets JWT after registration
+- user gets an access JWT and refresh token after registration, but gateway stores both in HttpOnly cookies for web clients
+- frontend stores user/session state only, not raw tokens
 - email may still be unverified
 - unverified users can access only whitelist endpoints
+- authenticated unsafe HTTP methods require `X-CSRF-Token` matching the readable CSRF cookie
 - verification code is stored in Redis
 - resend returns the same code while it is alive
 - resend cooldown 60 seconds
 - 3 failed verify attempts produce 1 hour lockout
+- refresh sessions are revoked in Postgres by setting `auth.refresh_sessions.revoked_at`; only token hashes are persisted
+- refresh rotation is atomic: revoke old session and insert new session in one transaction
 
 ## Async Rules
 
@@ -108,7 +114,9 @@ Consumer:
 
 Delivery channel in MVP:
 
-- email only via Mailganer
+- email only
+- local development uses log/stub sender
+- Mailganer is planned as production provider
 
 ## Non-goals
 
@@ -120,8 +128,9 @@ Delivery channel in MVP:
 
 ## Implementation Status
 
-System design is frozen enough to move into:
+System design is frozen enough for current auth/notification foundation. Next implementation focus:
 
-1. protobuf contracts
-2. goose migrations
-3. service implementation
+1. inventory, matching and communication service implementation
+2. api-gateway REST -> gRPC mapping for domain services
+3. frontend flows
+4. integration tests

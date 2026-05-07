@@ -25,7 +25,10 @@ Tables:
 ## Важные правила
 
 - repeat response after `withdrawn` is forbidden
+- vacancy creation validates approved owner PVZ through `inventory-service`
+- active vacancy checks for PVZ updates are exposed to `inventory-service`
 - assignment is created from accepted response
+- response creation synchronously creates conversation through `communication-service`
 - old vacancy is not reused after `assignment.cancelled`
 - reviews are allowed after `completed` and `cancelled`
 - review replies are flat and sorted by `created_at ASC`
@@ -34,7 +37,9 @@ Tables:
 
 - PostgreSQL
 - gRPC via gateway
+- gRPC calls to `inventory-service` for approved PVZ validation
 - calls to `communication-service` for conversation creation
+- gRPC checks for `inventory-service` and `communication-service`
 - Kafka producer for `matching.response_created`
 
 ## Next implementation steps

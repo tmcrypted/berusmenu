@@ -1,4 +1,4 @@
-module gitlab.com/berusmenu/proto
+module github.com/tmcrypted/berusmenu/proto
 
 go 1.25.1
 

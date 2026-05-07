@@ -4,12 +4,12 @@ import (
 	"context"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.com/berusmenu/api-gateway/internal/http/response"
-	authv1 "gitlab.com/berusmenu/proto/gen/go/auth/v1"
-	commonv1 "gitlab.com/berusmenu/proto/gen/go/common/v1"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/config"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/http/response"
+	authv1 "github.com/tmcrypted/berusmenu/proto/gen/go/auth/v1"
+	commonv1 "github.com/tmcrypted/berusmenu/proto/gen/go/common/v1"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -24,11 +24,11 @@ type CurrentUser struct {
 	EmailVerified bool
 }
 
-func Auth(client authv1.AuthServiceClient) gin.HandlerFunc {
+func Auth(client authv1.AuthServiceClient, cfg config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token, ok := ExtractBearerToken(c.GetHeader("Authorization"))
-		if !ok {
-			response.Error(c, http.StatusUnauthorized, "unauthenticated", "missing or invalid bearer token")
+		token, err := c.Cookie(cfg.AccessCookieName)
+		if err != nil || token == "" {
+			response.Error(c, http.StatusUnauthorized, "unauthenticated", "missing access cookie")
 			return
 		}
 
@@ -55,16 +55,6 @@ func Auth(client authv1.AuthServiceClient) gin.HandlerFunc {
 		c.Request = c.Request.WithContext(WithIdentityMetadata(c.Request.Context(), user))
 		c.Next()
 	}
-}
-
-func ExtractBearerToken(header string) (string, bool) {
-	const prefix = "Bearer "
-	if len(header) <= len(prefix) || !strings.EqualFold(header[:len(prefix)], prefix) {
-		return "", false
-	}
-
-	token := strings.TrimSpace(header[len(prefix):])
-	return token, token != ""
 }
 
 func GetCurrentUser(c *gin.Context) (CurrentUser, bool) {

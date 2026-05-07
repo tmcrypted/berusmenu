@@ -3,7 +3,7 @@ syntax = "proto3";
 package auth.v1;
 
 // Сгенерированный Go-пакет: см. go_package в корневом go.mod.
-option go_package = "gitlab.com/berusmenu/auth-service/gen/auth/v1;authv1";
+option go_package = "github.com/tmcrypted/berusmenu/auth-service/gen/auth/v1;authv1";
 
 // Auth — регистрация, сессии (JWT/opaque), проверка токена для внутренних gRPC-вызовов.
 service AuthService {

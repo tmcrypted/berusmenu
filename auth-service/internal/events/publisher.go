@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/segmentio/kafka-go"
-	"gitlab.com/berusmenu/auth-service/internal/config"
-	eventsv1 "gitlab.com/berusmenu/proto/gen/go/events/v1"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/config"
+	eventsv1 "github.com/tmcrypted/berusmenu/proto/gen/go/events/v1"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

@@ -1,12 +1,13 @@
-module gitlab.com/berusmenu/notification-service
+module github.com/tmcrypted/berusmenu/notification-service
 
 go 1.25.1
 
-replace gitlab.com/berusmenu/proto => ../proto
+replace github.com/tmcrypted/berusmenu/proto => ../proto
 
 require (
 	github.com/segmentio/kafka-go v0.4.51
-	gitlab.com/berusmenu/proto v0.0.0-00010101000000-000000000000
+	github.com/tmcrypted/berusmenu/proto v0.0.0-00010101000000-000000000000
+	go.uber.org/mock v0.6.0
 	google.golang.org/protobuf v1.36.11
 )
 

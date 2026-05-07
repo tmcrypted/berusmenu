@@ -1,47 +1,51 @@
 package httpserver
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
-	"gitlab.com/berusmenu/api-gateway/internal/config"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/config"
 )
 
-func TestOpenAPIEndpoint(t *testing.T) {
+func TestHealthEndpoints(t *testing.T) {
 	router := NewRouter(Dependencies{Config: config.Config{}})
 
-	req := httptest.NewRequest(http.MethodGet, "/openapi.json", nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	tests := []string{
+		"/health/live",
+		"/health/ready",
 	}
 
-	var body map[string]any
-	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
-		t.Fatalf("unmarshal openapi: %v", err)
-	}
+	for _, path := range tests {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
 
-	if body["openapi"] != "3.0.3" {
-		t.Fatalf("openapi = %v, want 3.0.3", body["openapi"])
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+			}
+		})
 	}
 }
 
-func TestSwaggerUIEndpoint(t *testing.T) {
+func TestSwaggerAndOpenAPIEndpointsAreRemoved(t *testing.T) {
 	router := NewRouter(Dependencies{Config: config.Config{}})
 
-	req := httptest.NewRequest(http.MethodGet, "/swagger", nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	tests := []string{
+		"/openapi.json",
+		"/swagger",
 	}
-	if !strings.Contains(rec.Body.String(), "SwaggerUIBundle") {
-		t.Fatalf("body does not contain Swagger UI bootstrap: %s", rec.Body.String())
+
+	for _, path := range tests {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusNotFound {
+				t.Fatalf("status = %d, want %d", rec.Code, http.StatusNotFound)
+			}
+		})
 	}
 }

@@ -12,14 +12,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
-	"gitlab.com/berusmenu/auth-service/internal/config"
-	"gitlab.com/berusmenu/auth-service/internal/events"
-	"gitlab.com/berusmenu/auth-service/internal/migrations"
-	"gitlab.com/berusmenu/auth-service/internal/server"
-	"gitlab.com/berusmenu/auth-service/internal/store"
-	"gitlab.com/berusmenu/auth-service/internal/verification"
-	authv1 "gitlab.com/berusmenu/proto/gen/go/auth/v1"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/config"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/events"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/migrations"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/server"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/store"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/verification"
+	authv1 "github.com/tmcrypted/berusmenu/proto/gen/go/auth/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 func main() {
@@ -67,6 +69,9 @@ func main() {
 
 	grpcServer := grpc.NewServer()
 	authv1.RegisterAuthServiceServer(grpcServer, authServer)
+	healthServer := health.NewServer()
+	healthpb.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 
 	errCh := make(chan error, 1)
 	go func() {

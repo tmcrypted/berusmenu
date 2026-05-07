@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	commonv1 "gitlab.com/berusmenu/proto/gen/go/common/v1"
+	commonv1 "github.com/tmcrypted/berusmenu/proto/gen/go/common/v1"
 )
 
 var (
@@ -22,6 +23,8 @@ var (
 type Store struct {
 	pool *pgxpool.Pool
 }
+
+var psql = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 type User struct {
 	ID              int64
@@ -48,11 +51,16 @@ func (s *Store) CreateUserWithSession(ctx context.Context, user User, refreshTok
 	}
 	defer tx.Rollback(ctx)
 
-	row := tx.QueryRow(ctx, `
-		INSERT INTO auth.users (email, password_hash, role, full_name, phone)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, email, email_verified_at, password_hash, role, full_name, phone, avatar_url, status, created_at, updated_at
-	`, user.Email, user.PasswordHash, roleToDB(user.Role), user.FullName, user.Phone)
+	sql, args, err := psql.Insert("auth.users").
+		Columns("email", "password_hash", "role", "full_name", "phone").
+		Values(user.Email, user.PasswordHash, roleToDB(user.Role), user.FullName, user.Phone).
+		Suffix("RETURNING " + userColumns()).
+		ToSql()
+	if err != nil {
+		return User{}, err
+	}
+
+	row := tx.QueryRow(ctx, sql, args...)
 
 	created, err := scanUser(row)
 	if err != nil {
@@ -74,49 +82,103 @@ func (s *Store) CreateUserWithSession(ctx context.Context, user User, refreshTok
 }
 
 func (s *Store) GetUserByEmail(ctx context.Context, email string) (User, error) {
-	row := s.pool.QueryRow(ctx, `
-		SELECT id, email, email_verified_at, password_hash, role, full_name, phone, avatar_url, status, created_at, updated_at
-		FROM auth.users
-		WHERE email = $1
-	`, normalizeEmail(email))
+	sql, args, err := psql.Select(userColumns()).
+		From("auth.users").
+		Where(sq.Eq{"email": normalizeEmail(email)}).
+		ToSql()
+	if err != nil {
+		return User{}, err
+	}
+	row := s.pool.QueryRow(ctx, sql, args...)
 	return scanUser(row)
 }
 
 func (s *Store) GetUserByID(ctx context.Context, id int64) (User, error) {
-	row := s.pool.QueryRow(ctx, `
-		SELECT id, email, email_verified_at, password_hash, role, full_name, phone, avatar_url, status, created_at, updated_at
-		FROM auth.users
-		WHERE id = $1
-	`, id)
+	sql, args, err := psql.Select(userColumns()).
+		From("auth.users").
+		Where(sq.Eq{"id": id}).
+		ToSql()
+	if err != nil {
+		return User{}, err
+	}
+	row := s.pool.QueryRow(ctx, sql, args...)
 	return scanUser(row)
 }
 
 func (s *Store) CreateRefreshSession(ctx context.Context, userID int64, refreshToken string, expiresAt time.Time) error {
-	_, err := s.pool.Exec(ctx, `
-		INSERT INTO auth.refresh_sessions (user_id, token_hash, expires_at)
-		VALUES ($1, $2, $3)
-	`, userID, HashToken(refreshToken), expiresAt)
+	sql, args, err := refreshSessionInsert(userID, refreshToken, expiresAt).ToSql()
+	if err != nil {
+		return err
+	}
+	_, err = s.pool.Exec(ctx, sql, args...)
 	return err
 }
 
 func (s *Store) RefreshSessionUser(ctx context.Context, refreshToken string) (User, error) {
-	row := s.pool.QueryRow(ctx, `
-		SELECT u.id, u.email, u.email_verified_at, u.password_hash, u.role, u.full_name, u.phone, u.avatar_url, u.status, u.created_at, u.updated_at
-		FROM auth.refresh_sessions rs
-		JOIN auth.users u ON u.id = rs.user_id
-		WHERE rs.token_hash = $1
-		  AND rs.revoked_at IS NULL
-		  AND rs.expires_at > NOW()
-	`, HashToken(refreshToken))
+	sql, args, err := activeRefreshSessionUserSelect(refreshToken, false).ToSql()
+	if err != nil {
+		return User{}, err
+	}
+	row := s.pool.QueryRow(ctx, sql, args...)
 	return scanUser(row)
 }
 
+func (s *Store) RotateRefreshSession(ctx context.Context, oldRefreshToken string, newRefreshToken string, newExpiresAt time.Time) (User, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return User{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	sql, args, err := activeRefreshSessionUserSelect(oldRefreshToken, true).ToSql()
+	if err != nil {
+		return User{}, err
+	}
+	user, err := scanUser(tx.QueryRow(ctx, sql, args...))
+	if err != nil {
+		return User{}, err
+	}
+
+	updateSQL, updateArgs, err := psql.Update("auth.refresh_sessions").
+		Set("revoked_at", sq.Expr("NOW()")).
+		Where(sq.Eq{"token_hash": HashToken(oldRefreshToken)}).
+		Where(sq.Eq{"revoked_at": nil}).
+		ToSql()
+	if err != nil {
+		return User{}, err
+	}
+	tag, err := tx.Exec(ctx, updateSQL, updateArgs...)
+	if err != nil {
+		return User{}, err
+	}
+	if tag.RowsAffected() == 0 {
+		return User{}, ErrNotFound
+	}
+
+	insertSQL, insertArgs, err := refreshSessionInsert(user.ID, newRefreshToken, newExpiresAt).ToSql()
+	if err != nil {
+		return User{}, err
+	}
+	if _, err := tx.Exec(ctx, insertSQL, insertArgs...); err != nil {
+		return User{}, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return User{}, err
+	}
+	return user, nil
+}
+
 func (s *Store) RevokeRefreshSession(ctx context.Context, refreshToken string) error {
-	tag, err := s.pool.Exec(ctx, `
-		UPDATE auth.refresh_sessions
-		SET revoked_at = NOW()
-		WHERE token_hash = $1 AND revoked_at IS NULL
-	`, HashToken(refreshToken))
+	sql, args, err := psql.Update("auth.refresh_sessions").
+		Set("revoked_at", sq.Expr("NOW()")).
+		Where(sq.Eq{"token_hash": HashToken(refreshToken)}).
+		Where(sq.Eq{"revoked_at": nil}).
+		ToSql()
+	if err != nil {
+		return err
+	}
+	tag, err := s.pool.Exec(ctx, sql, args...)
 	if err != nil {
 		return err
 	}
@@ -127,12 +189,16 @@ func (s *Store) RevokeRefreshSession(ctx context.Context, refreshToken string) e
 }
 
 func (s *Store) MarkEmailVerified(ctx context.Context, userID int64) (User, error) {
-	row := s.pool.QueryRow(ctx, `
-		UPDATE auth.users
-		SET email_verified_at = COALESCE(email_verified_at, NOW()), updated_at = NOW()
-		WHERE id = $1
-		RETURNING id, email, email_verified_at, password_hash, role, full_name, phone, avatar_url, status, created_at, updated_at
-	`, userID)
+	sql, args, err := psql.Update("auth.users").
+		Set("email_verified_at", sq.Expr("COALESCE(email_verified_at, NOW())")).
+		Set("updated_at", sq.Expr("NOW()")).
+		Where(sq.Eq{"id": userID}).
+		Suffix("RETURNING " + userColumns()).
+		ToSql()
+	if err != nil {
+		return User{}, err
+	}
+	row := s.pool.QueryRow(ctx, sql, args...)
 	return scanUser(row)
 }
 
@@ -151,12 +217,18 @@ func (s *Store) UpdateProfile(ctx context.Context, userID int64, fullName *strin
 		current.AvatarURL = avatarURL
 	}
 
-	row := s.pool.QueryRow(ctx, `
-		UPDATE auth.users
-		SET full_name = $2, phone = $3, avatar_url = $4, updated_at = NOW()
-		WHERE id = $1
-		RETURNING id, email, email_verified_at, password_hash, role, full_name, phone, avatar_url, status, created_at, updated_at
-	`, userID, current.FullName, current.Phone, current.AvatarURL)
+	sql, args, err := psql.Update("auth.users").
+		Set("full_name", current.FullName).
+		Set("phone", current.Phone).
+		Set("avatar_url", current.AvatarURL).
+		Set("updated_at", sq.Expr("NOW()")).
+		Where(sq.Eq{"id": userID}).
+		Suffix("RETURNING " + userColumns()).
+		ToSql()
+	if err != nil {
+		return User{}, err
+	}
+	row := s.pool.QueryRow(ctx, sql, args...)
 	return scanUser(row)
 }
 
@@ -187,11 +259,47 @@ func scanUser(row pgx.Row) (User, error) {
 }
 
 func insertRefreshSession(ctx context.Context, tx pgx.Tx, userID int64, refreshToken string, expiresAt time.Time) error {
-	_, err := tx.Exec(ctx, `
-		INSERT INTO auth.refresh_sessions (user_id, token_hash, expires_at)
-		VALUES ($1, $2, $3)
-	`, userID, HashToken(refreshToken), expiresAt)
+	sql, args, err := refreshSessionInsert(userID, refreshToken, expiresAt).ToSql()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(ctx, sql, args...)
 	return err
+}
+
+func userColumns() string {
+	return "id, email, email_verified_at, password_hash, role, full_name, phone, avatar_url, status, created_at, updated_at"
+}
+
+func refreshSessionInsert(userID int64, refreshToken string, expiresAt time.Time) sq.InsertBuilder {
+	return psql.Insert("auth.refresh_sessions").
+		Columns("user_id", "token_hash", "expires_at").
+		Values(userID, HashToken(refreshToken), expiresAt)
+}
+
+func activeRefreshSessionUserSelect(refreshToken string, forUpdate bool) sq.SelectBuilder {
+	builder := psql.Select(
+		"u.id",
+		"u.email",
+		"u.email_verified_at",
+		"u.password_hash",
+		"u.role",
+		"u.full_name",
+		"u.phone",
+		"u.avatar_url",
+		"u.status",
+		"u.created_at",
+		"u.updated_at",
+	).
+		From("auth.refresh_sessions rs").
+		Join("auth.users u ON u.id = rs.user_id").
+		Where(sq.Eq{"rs.token_hash": HashToken(refreshToken)}).
+		Where(sq.Eq{"rs.revoked_at": nil}).
+		Where(sq.Expr("rs.expires_at > NOW()"))
+	if forUpdate {
+		builder = builder.Suffix("FOR UPDATE")
+	}
+	return builder
 }
 
 func HashToken(token string) string {

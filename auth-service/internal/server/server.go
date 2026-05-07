@@ -2,22 +2,16 @@ package server
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
-	"fmt"
 	"strconv"
-	"strings"
-	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"gitlab.com/berusmenu/auth-service/internal/config"
-	"gitlab.com/berusmenu/auth-service/internal/events"
-	"gitlab.com/berusmenu/auth-service/internal/store"
-	"gitlab.com/berusmenu/auth-service/internal/verification"
-	authv1 "gitlab.com/berusmenu/proto/gen/go/auth/v1"
-	commonv1 "gitlab.com/berusmenu/proto/gen/go/common/v1"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/config"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/dto"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/events"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/service"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/store"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/verification"
+	authv1 "github.com/tmcrypted/berusmenu/proto/gen/go/auth/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -33,174 +27,80 @@ type Dependencies struct {
 
 type Server struct {
 	authv1.UnimplementedAuthServiceServer
-	cfg          config.Config
-	users        *store.Store
-	verification *verification.Store
-	publisher    *events.Publisher
-}
-
-type accessClaims struct {
-	Email         string `json:"email"`
-	Role          string `json:"role"`
-	EmailVerified bool   `json:"email_verified"`
-	jwt.RegisteredClaims
+	auth *service.Service
 }
 
 func New(deps Dependencies) *Server {
 	return &Server{
-		cfg:          deps.Config,
-		users:        deps.Users,
-		verification: deps.Verification,
-		publisher:    deps.Publisher,
+		auth: service.New(deps.Config, deps.Users, deps.Verification, deps.Publisher),
 	}
 }
 
 func (s *Server) Register(ctx context.Context, req *authv1.RegisterRequest) (*authv1.RegisterResponse, error) {
-	email := store.NormalizeEmail(req.GetEmail())
-	if email == "" || req.GetPassword() == "" || strings.TrimSpace(req.GetFullName()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "email, password and full_name are required")
-	}
-	if len(req.GetPassword()) < 8 {
-		return nil, status.Error(codes.InvalidArgument, "password must be at least 8 characters")
-	}
-	role := req.GetRole()
-	if role == commonv1.UserRole_USER_ROLE_UNSPECIFIED {
-		role = commonv1.UserRole_USER_ROLE_WORKER
-	}
-	if role != commonv1.UserRole_USER_ROLE_OWNER && role != commonv1.UserRole_USER_ROLE_WORKER && role != commonv1.UserRole_USER_ROLE_MODERATOR {
-		return nil, status.Error(codes.InvalidArgument, "invalid role")
-	}
-
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.GetPassword()), bcrypt.DefaultCost)
+	auth, err := s.auth.Register(ctx, dto.RegisterInput{
+		Email:    req.GetEmail(),
+		Password: req.GetPassword(),
+		FullName: req.GetFullName(),
+		Role:     req.GetRole(),
+		Phone:    req.Phone,
+	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to hash password")
+		return nil, toGRPCError(err)
 	}
-
-	refreshToken, err := randomToken()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to generate refresh token")
-	}
-	refreshExpiresAt := time.Now().Add(s.cfg.RefreshTTL)
-
-	user, err := s.users.CreateUserWithSession(ctx, store.User{
-		Email:        email,
-		PasswordHash: string(passwordHash),
-		Role:         role,
-		FullName:     strings.TrimSpace(req.GetFullName()),
-		Phone:        req.Phone,
-	}, refreshToken, refreshExpiresAt)
-	if err != nil {
-		if errors.Is(err, store.ErrAlreadyExists) {
-			return nil, status.Error(codes.AlreadyExists, "email already registered")
-		}
-		return nil, status.Error(codes.Internal, "failed to create user")
-	}
-
-	codeState, err := s.verification.CreateOrReuseCode(ctx, user.ID)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to create verification code")
-	}
-	if err := s.publisher.EmailVerificationRequested(ctx, user.ID, user.Email, codeState.Code); err != nil {
-		return nil, status.Error(codes.Unavailable, "failed to publish verification email event")
-	}
-
-	auth, err := s.authPayload(user, refreshToken)
-	if err != nil {
-		return nil, err
-	}
-	return &authv1.RegisterResponse{Auth: auth}, nil
+	return &authv1.RegisterResponse{Auth: toProtoAuthPayload(auth)}, nil
 }
 
 func (s *Server) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginResponse, error) {
-	user, err := s.users.GetUserByEmail(ctx, req.GetEmail())
+	auth, err := s.auth.Login(ctx, dto.LoginInput{
+		Email:    req.GetEmail(),
+		Password: req.GetPassword(),
+	})
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid email or password")
+		return nil, toGRPCError(err)
 	}
-	if user.Status != "active" {
-		return nil, status.Error(codes.PermissionDenied, "user is blocked")
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.GetPassword())); err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid email or password")
-	}
-
-	refreshToken, err := randomToken()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to generate refresh token")
-	}
-	if err := s.users.CreateRefreshSession(ctx, user.ID, refreshToken, time.Now().Add(s.cfg.RefreshTTL)); err != nil {
-		return nil, status.Error(codes.Internal, "failed to create refresh session")
-	}
-
-	auth, err := s.authPayload(user, refreshToken)
-	if err != nil {
-		return nil, err
-	}
-	return &authv1.LoginResponse{Auth: auth}, nil
+	return &authv1.LoginResponse{Auth: toProtoAuthPayload(auth)}, nil
 }
 
 func (s *Server) Refresh(ctx context.Context, req *authv1.RefreshRequest) (*authv1.RefreshResponse, error) {
-	user, err := s.users.RefreshSessionUser(ctx, req.GetRefreshToken())
+	auth, err := s.auth.Refresh(ctx, dto.RefreshInput{RefreshToken: req.GetRefreshToken()})
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid refresh token")
+		return nil, toGRPCError(err)
 	}
-	if user.Status != "active" {
-		return nil, status.Error(codes.PermissionDenied, "user is blocked")
-	}
-	if err := s.users.RevokeRefreshSession(ctx, req.GetRefreshToken()); err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid refresh token")
-	}
-	refreshToken, err := randomToken()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to generate refresh token")
-	}
-	if err := s.users.CreateRefreshSession(ctx, user.ID, refreshToken, time.Now().Add(s.cfg.RefreshTTL)); err != nil {
-		return nil, status.Error(codes.Internal, "failed to create refresh session")
-	}
-
-	auth, err := s.authPayload(user, refreshToken)
-	if err != nil {
-		return nil, err
-	}
-	return &authv1.RefreshResponse{Auth: auth}, nil
+	return &authv1.RefreshResponse{Auth: toProtoAuthPayload(auth)}, nil
 }
 
 func (s *Server) Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error) {
-	if err := s.users.RevokeRefreshSession(ctx, req.GetRefreshToken()); err != nil && !errors.Is(err, store.ErrNotFound) {
-		return nil, status.Error(codes.Internal, "failed to revoke refresh token")
+	if err := s.auth.Logout(ctx, dto.LogoutInput{RefreshToken: req.GetRefreshToken()}); err != nil {
+		return nil, toGRPCError(err)
 	}
 	return &authv1.LogoutResponse{}, nil
 }
 
 func (s *Server) ValidateToken(ctx context.Context, req *authv1.ValidateTokenRequest) (*authv1.ValidateTokenResponse, error) {
-	claims, err := s.parseAccessToken(req.GetAccessToken())
+	out, err := s.auth.ValidateToken(ctx, dto.ValidateTokenInput{AccessToken: req.GetAccessToken()})
 	if err != nil {
-		return &authv1.ValidateTokenResponse{Valid: false}, nil
+		return nil, toGRPCError(err)
 	}
-	userID, err := strconv.ParseInt(claims.Subject, 10, 64)
-	if err != nil {
-		return &authv1.ValidateTokenResponse{Valid: false}, nil
-	}
-	user, err := s.users.GetUserByID(ctx, userID)
-	if err != nil || user.Status != "active" {
-		return &authv1.ValidateTokenResponse{Valid: false}, nil
-	}
-
 	return &authv1.ValidateTokenResponse{
-		Valid:         true,
-		UserId:        user.ID,
-		Role:          user.Role,
-		Email:         user.Email,
-		EmailVerified: user.EmailVerifiedAt != nil,
+		Valid:         out.Valid,
+		UserId:        out.UserID,
+		Role:          out.Role,
+		Email:         out.Email,
+		EmailVerified: out.EmailVerified,
 	}, nil
 }
 
 func (s *Server) GetUser(ctx context.Context, req *authv1.GetUserRequest) (*authv1.GetUserResponse, error) {
-	if err := requireSameUser(ctx, req.GetUserId()); err != nil {
+	userID, err := userIDFromMetadata(ctx)
+	if err != nil {
 		return nil, err
 	}
-	user, err := s.users.GetUserByID(ctx, req.GetUserId())
+	user, err := s.auth.GetUser(ctx, dto.GetUserInput{
+		CurrentUserID: userID,
+		UserID:        req.GetUserId(),
+	})
 	if err != nil {
-		return nil, notFoundOrInternal(err, "user not found", "failed to get user")
+		return nil, toGRPCError(err)
 	}
 	return &authv1.GetUserResponse{User: toProtoUser(user)}, nil
 }
@@ -210,9 +110,14 @@ func (s *Server) UpdateProfile(ctx context.Context, req *authv1.UpdateProfileReq
 	if err != nil {
 		return nil, err
 	}
-	user, err := s.users.UpdateProfile(ctx, userID, req.FullName, req.Phone, req.AvatarUrl)
+	user, err := s.auth.UpdateProfile(ctx, dto.UpdateProfileInput{
+		UserID:    userID,
+		FullName:  req.FullName,
+		Phone:     req.Phone,
+		AvatarURL: req.AvatarUrl,
+	})
 	if err != nil {
-		return nil, notFoundOrInternal(err, "user not found", "failed to update profile")
+		return nil, toGRPCError(err)
 	}
 	return &authv1.UpdateProfileResponse{User: toProtoUser(user)}, nil
 }
@@ -222,31 +127,13 @@ func (s *Server) ResendVerificationCode(ctx context.Context, req *authv1.ResendV
 	if err != nil {
 		return nil, err
 	}
-	user, err := s.users.GetUserByID(ctx, userID)
+	out, err := s.auth.ResendVerificationCode(ctx, dto.ResendVerificationCodeInput{UserID: userID})
 	if err != nil {
-		return nil, notFoundOrInternal(err, "user not found", "failed to get user")
+		return nil, toGRPCError(err)
 	}
-	if user.EmailVerifiedAt != nil {
-		return nil, status.Error(codes.FailedPrecondition, "email already verified")
-	}
-
-	codeState, err := s.verification.ResendCode(ctx, userID)
-	if err != nil {
-		if errors.Is(err, verification.ErrCooldown) {
-			return nil, status.Error(codes.ResourceExhausted, "resend cooldown is active")
-		}
-		if errors.Is(err, verification.ErrLockout) {
-			return nil, status.Error(codes.ResourceExhausted, "verification attempts lockout is active")
-		}
-		return nil, status.Error(codes.Internal, "failed to create verification code")
-	}
-	if err := s.publisher.EmailVerificationRequested(ctx, user.ID, user.Email, codeState.Code); err != nil {
-		return nil, status.Error(codes.Unavailable, "failed to publish verification email event")
-	}
-
 	return &authv1.ResendVerificationCodeResponse{
-		CodeExpiresAt:     timestamppb.New(codeState.CodeExpiresAt),
-		ResendAvailableAt: timestamppb.New(codeState.ResendAvailableAt),
+		CodeExpiresAt:     timestamppb.New(out.CodeExpiresAt),
+		ResendAvailableAt: timestamppb.New(out.ResendAvailableAt),
 	}, nil
 }
 
@@ -255,68 +142,25 @@ func (s *Server) VerifyEmail(ctx context.Context, req *authv1.VerifyEmailRequest
 	if err != nil {
 		return nil, err
 	}
-	if err := s.verification.VerifyCode(ctx, userID, strings.TrimSpace(req.GetCode())); err != nil {
-		if errors.Is(err, verification.ErrBadCode) || errors.Is(err, verification.ErrNoCode) {
-			return nil, status.Error(codes.InvalidArgument, "invalid verification code")
-		}
-		if errors.Is(err, verification.ErrLockout) {
-			return nil, status.Error(codes.ResourceExhausted, "verification attempts lockout is active")
-		}
-		return nil, status.Error(codes.Internal, "failed to verify code")
-	}
-	user, err := s.users.MarkEmailVerified(ctx, userID)
+	user, err := s.auth.VerifyEmail(ctx, dto.VerifyEmailInput{
+		UserID: userID,
+		Code:   req.GetCode(),
+	})
 	if err != nil {
-		return nil, notFoundOrInternal(err, "user not found", "failed to verify email")
+		return nil, toGRPCError(err)
 	}
 	return &authv1.VerifyEmailResponse{User: toProtoUser(user)}, nil
 }
 
-func (s *Server) authPayload(user store.User, refreshToken string) (*authv1.AuthPayload, error) {
-	accessToken, accessExpiresAt, err := s.issueAccessToken(user)
-	if err != nil {
-		return nil, err
-	}
+func toProtoAuthPayload(auth dto.AuthPayload) *authv1.AuthPayload {
 	return &authv1.AuthPayload{
 		Tokens: &authv1.AuthTokens{
-			AccessToken:     accessToken,
-			RefreshToken:    refreshToken,
-			AccessExpiresAt: timestamppb.New(accessExpiresAt),
+			AccessToken:     auth.AccessToken,
+			RefreshToken:    auth.RefreshToken,
+			AccessExpiresAt: timestamppb.New(auth.AccessExpiresAt),
 		},
-		User: toProtoUser(user),
-	}, nil
-}
-
-func (s *Server) issueAccessToken(user store.User) (string, time.Time, error) {
-	expiresAt := time.Now().Add(s.cfg.AccessTTL)
-	claims := accessClaims{
-		Email:         user.Email,
-		Role:          roleString(user.Role),
-		EmailVerified: user.EmailVerifiedAt != nil,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   strconv.FormatInt(user.ID, 10),
-			ExpiresAt: jwt.NewNumericDate(expiresAt),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
+		User: toProtoUser(auth.User),
 	}
-	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.cfg.JWTSecret))
-	if err != nil {
-		return "", time.Time{}, status.Error(codes.Internal, "failed to sign access token")
-	}
-	return token, expiresAt, nil
-}
-
-func (s *Server) parseAccessToken(raw string) (*accessClaims, error) {
-	claims := &accessClaims{}
-	token, err := jwt.ParseWithClaims(raw, claims, func(token *jwt.Token) (interface{}, error) {
-		if token.Method != jwt.SigningMethodHS256 {
-			return nil, fmt.Errorf("unexpected signing method")
-		}
-		return []byte(s.cfg.JWTSecret), nil
-	})
-	if err != nil || !token.Valid {
-		return nil, fmt.Errorf("invalid token")
-	}
-	return claims, nil
 }
 
 func toProtoUser(user store.User) *authv1.User {
@@ -336,14 +180,6 @@ func toProtoUser(user store.User) *authv1.User {
 	return out
 }
 
-func randomToken() (string, error) {
-	buf := make([]byte, 32)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
-	}
-	return base64.RawURLEncoding.EncodeToString(buf), nil
-}
-
 func userIDFromMetadata(ctx context.Context) (int64, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
@@ -360,31 +196,30 @@ func userIDFromMetadata(ctx context.Context) (int64, error) {
 	return userID, nil
 }
 
-func requireSameUser(ctx context.Context, requestedID int64) error {
-	userID, err := userIDFromMetadata(ctx)
-	if err != nil {
-		return err
+func toGRPCError(err error) error {
+	var svcErr service.Error
+	if !errors.As(err, &svcErr) {
+		return status.Error(codes.Internal, "internal")
 	}
-	if userID != requestedID {
-		return status.Error(codes.PermissionDenied, "cannot access another user")
-	}
-	return nil
-}
 
-func notFoundOrInternal(err error, notFoundMessage string, internalMessage string) error {
-	if errors.Is(err, store.ErrNotFound) {
-		return status.Error(codes.NotFound, notFoundMessage)
+	code := codes.Internal
+	switch {
+	case errors.Is(svcErr.Kind, service.ErrInvalidArgument):
+		code = codes.InvalidArgument
+	case errors.Is(svcErr.Kind, service.ErrAlreadyExists):
+		code = codes.AlreadyExists
+	case errors.Is(svcErr.Kind, service.ErrUnauthenticated):
+		code = codes.Unauthenticated
+	case errors.Is(svcErr.Kind, service.ErrPermissionDenied):
+		code = codes.PermissionDenied
+	case errors.Is(svcErr.Kind, service.ErrNotFound):
+		code = codes.NotFound
+	case errors.Is(svcErr.Kind, service.ErrUnavailable):
+		code = codes.Unavailable
+	case errors.Is(svcErr.Kind, service.ErrFailedPrecondition):
+		code = codes.FailedPrecondition
+	case errors.Is(svcErr.Kind, service.ErrResourceExhausted):
+		code = codes.ResourceExhausted
 	}
-	return status.Error(codes.Internal, internalMessage)
-}
-
-func roleString(role commonv1.UserRole) string {
-	switch role {
-	case commonv1.UserRole_USER_ROLE_OWNER:
-		return "owner"
-	case commonv1.UserRole_USER_ROLE_MODERATOR:
-		return "moderator"
-	default:
-		return "worker"
-	}
+	return status.Error(code, svcErr.Message)
 }

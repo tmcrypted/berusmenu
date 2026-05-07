@@ -4,7 +4,7 @@ CREATE SCHEMA IF NOT EXISTS inventory;
 CREATE TABLE IF NOT EXISTS inventory.pvz (
     id BIGSERIAL PRIMARY KEY,
     owner_id BIGINT NOT NULL,
-    status TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected', 'blocked')),
     city TEXT NOT NULL,
     address TEXT NOT NULL,
     company_name TEXT NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS inventory.pvz (
 CREATE TABLE IF NOT EXISTS inventory.pvz_moderation_events (
     id BIGSERIAL PRIMARY KEY,
     pvz_id BIGINT NOT NULL REFERENCES inventory.pvz (id) ON DELETE CASCADE,
-    action TEXT NOT NULL,
+    action TEXT NOT NULL CHECK (action IN ('submitted', 'approved', 'rejected', 'blocked')),
     actor_user_id BIGINT NOT NULL,
     comment TEXT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

@@ -1,8 +1,8 @@
 # AGENTS
 
-See the global guide first: [../AGENTS.md](C:/Users/tmcrypted/Desktop/berusmenu/AGENTS.md)
+See the global guide first: [../AGENTS.md](../AGENTS.md)
 
-## Repo Role
+## Frontend Role
 
 `frontend` owns the user-facing web interface.
 

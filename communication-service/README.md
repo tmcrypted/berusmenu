@@ -25,11 +25,13 @@ Tables:
 - conversation is unique per response
 - only owner and worker of conversation can read and write
 - chat becomes read-only after assignment finalization
+- message writes check response chat writability through `matching-service`
 
 ## Integrations
 
 - PostgreSQL
 - Redis for presence/typing/active connection state
+- gRPC calls to `matching-service` for chat writability
 - websocket traffic through gateway
 
 ## Next implementation steps

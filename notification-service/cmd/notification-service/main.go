@@ -8,14 +8,16 @@ import (
 	"syscall"
 	"time"
 
-	"gitlab.com/berusmenu/notification-service/internal/config"
-	"gitlab.com/berusmenu/notification-service/internal/consumer"
+	"github.com/tmcrypted/berusmenu/notification-service/internal/config"
+	"github.com/tmcrypted/berusmenu/notification-service/internal/consumer"
+	notificationservice "github.com/tmcrypted/berusmenu/notification-service/internal/service"
 )
 
 func main() {
 	cfg := config.Load()
-	
-	c := consumer.New(cfg)
+
+	service := notificationservice.New(notificationservice.NewLogSender())
+	c := consumer.New(cfg, service)
 	defer c.Close()
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -38,6 +40,6 @@ func main() {
 	// Give it a moment to commit offsets
 	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	log.Println("shutting down gracefully...")
 }

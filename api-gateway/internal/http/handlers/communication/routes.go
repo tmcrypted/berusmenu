@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.com/berusmenu/api-gateway/internal/http/response"
-	communicationv1 "gitlab.com/berusmenu/proto/gen/go/communication/v1"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/http/response"
+	communicationv1 "github.com/tmcrypted/berusmenu/proto/gen/go/communication/v1"
 )
 
 func RegisterRoutes(
@@ -13,6 +13,7 @@ func RegisterRoutes(
 	group *gin.RouterGroup,
 	client communicationv1.CommunicationServiceClient,
 	authMiddleware gin.HandlerFunc,
+	csrfMiddleware gin.HandlerFunc,
 	verifiedMiddleware gin.HandlerFunc,
 ) {
 	_ = client
@@ -20,8 +21,8 @@ func RegisterRoutes(
 	authorized := group.Group("", authMiddleware, verifiedMiddleware)
 	authorized.GET("/conversations", notImplemented())
 	authorized.GET("/conversations/:id/messages", notImplemented())
-	authorized.POST("/conversations/:id/messages", notImplemented())
-	authorized.POST("/conversations/:id/read", notImplemented())
+	authorized.POST("/conversations/:id/messages", csrfMiddleware, notImplemented())
+	authorized.POST("/conversations/:id/read", csrfMiddleware, notImplemented())
 
 	ws := router.Group("/ws", authMiddleware, verifiedMiddleware)
 	ws.GET("/conversations/:id", notImplemented())

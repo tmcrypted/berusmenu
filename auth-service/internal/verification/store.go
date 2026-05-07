@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"gitlab.com/berusmenu/auth-service/internal/config"
+	"github.com/tmcrypted/berusmenu/auth-service/internal/config"
 )
 
 var (

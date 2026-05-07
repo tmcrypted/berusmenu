@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.com/berusmenu/api-gateway/internal/config"
-	"gitlab.com/berusmenu/api-gateway/internal/grpcclients"
-	httpserver "gitlab.com/berusmenu/api-gateway/internal/http"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/config"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/grpcclients"
+	httpserver "github.com/tmcrypted/berusmenu/api-gateway/internal/http"
 )
 
 func main() {

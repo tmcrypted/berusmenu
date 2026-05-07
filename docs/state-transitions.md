@@ -15,12 +15,13 @@ Transitions:
 - moderator approve -> `approved`
 - moderator reject -> `rejected`
 - moderator block -> `blocked`
-- owner submits approved PVZ changes -> `pending`
+- owner updates approved PVZ data -> `pending`
 
 Rules:
 
-- submit update forbidden if active vacancy exists with status `published` or `assigned`
+- update forbidden if active vacancy exists with status `published` or `assigned`
 - new vacancy creation forbidden unless PVZ is `approved`
+- active vacancy check is performed through `matching-service`
 
 ## `matching.vacancies.status`
 

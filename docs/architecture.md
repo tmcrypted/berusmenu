@@ -26,13 +26,16 @@ flowchart LR
     AUTH --> K["Kafka"]
     MATCH --> K
     K --> NOTIF["notification-service"]
-    NOTIF --> MAIL["Mailganer"]
+    NOTIF --> MAIL["Email sender"]
 ```
 
 ## Основные решения
 
 - Frontend ходит только в `api-gateway`.
+- Browser auth state is transported through HttpOnly cookies managed by `api-gateway`; frontend JavaScript does not store access or refresh tokens.
+- Gateway enforces CSRF for authenticated unsafe HTTP methods and forwards verified identity downstream through gRPC metadata, not cookies.
 - Gateway общается с backend services по gRPC.
+- Gateway остается тонким; cross-domain business checks выполняются синхронно в owning services.
 - Все core business transactions синхронны.
 - Kafka используется только для async notification events.
 - `notification-service` отделен от доменных сервисов.
@@ -84,7 +87,8 @@ flowchart LR
 - Kafka consumer
 - event handlers
 - email sender
-- Mailganer integration
+- log/stub sender for local development
+- Mailganer integration later
 
 ## Sync vs Async
 
@@ -94,6 +98,7 @@ flowchart LR
 - verify email
 - create PVZ
 - approve/reject PVZ
+- update PVZ -> pending
 - create vacancy
 - create response
 - create conversation
@@ -119,7 +124,8 @@ flowchart LR
 ### `api-gateway`
 
 - HTTP entrypoint
-- auth middleware
+- auth cookie middleware
+- CSRF, CORS and security headers
 - gRPC fan-out
 - websocket edge
 
@@ -127,11 +133,11 @@ flowchart LR
 
 - не имеет публичного API
 - работает как background worker
-- читает Kafka и отправляет email
+- читает Kafka и передает notification в email sender abstraction
 
 ## External integrations
 
-- Mailganer для отправки email
+- Mailganer planned as production email provider
 - Nginx + SSL на `berusmenu.ru`
 
 ## Why this architecture

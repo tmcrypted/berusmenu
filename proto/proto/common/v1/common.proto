@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package berusmenu.common.v1;
 
-option go_package = "gitlab.com/berusmenu/proto/gen/go/common/v1;commonv1";
+option go_package = "github.com/tmcrypted/berusmenu/proto/gen/go/common/v1;commonv1";
 
 enum UserRole {
   USER_ROLE_UNSPECIFIED = 0;

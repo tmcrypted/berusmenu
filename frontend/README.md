@@ -1,6 +1,6 @@
 # frontend
 
-Frontend repository for Berusmenu MVP.
+Frontend workspace for Berusmenu MVP inside the monorepo.
 
 ## Ответственность
 
@@ -13,6 +13,8 @@ Frontend repository for Berusmenu MVP.
 
 ## Key UX rules
 
+- auth tokens are never stored in Zustand/localStorage; browser auth uses HttpOnly cookies from `api-gateway`
+- unsafe API calls send `X-CSRF-Token` from the readable `berusmenu_csrf` cookie
 - unverified user is redirected to verification screen
 - verification screen has:
   - logout

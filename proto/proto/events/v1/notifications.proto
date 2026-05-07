@@ -4,7 +4,7 @@ package berusmenu.events.v1;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "gitlab.com/berusmenu/proto/gen/go/events/v1;eventsv1";
+option go_package = "github.com/tmcrypted/berusmenu/proto/gen/go/events/v1;eventsv1";
 
 message EmailVerificationRequested {
   int64 user_id = 1;

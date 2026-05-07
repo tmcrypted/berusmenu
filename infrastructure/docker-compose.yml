@@ -53,15 +53,16 @@ services:
       - "0"
       - --check=false
       - --kafka-addr
-      - PLAINTEXT://0.0.0.0:9092
+      - INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:19092
       - --advertise-kafka-addr
-      - PLAINTEXT://kafka:9092
+      - INTERNAL://kafka:9092,EXTERNAL://localhost:19092
     ports:
       - "${KAFKA_PORT:-9092}:9092"
+      - "${KAFKA_EXTERNAL_PORT:-19092}:19092"
     volumes:
       - kafka_data:/var/lib/redpanda/data
     healthcheck:
-      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy: true'"]
+      test: ["CMD-SHELL", "rpk cluster health | grep -Eq 'Healthy:[[:space:]]+true'"]
       interval: 15s
       timeout: 10s
       retries: 10
@@ -82,6 +83,10 @@ services:
       MATCHING_GRPC_ADDR: matching-service:50053
       COMMUNICATION_GRPC_ADDR: communication-service:50054
       REQUEST_TIMEOUT: ${REQUEST_TIMEOUT:-5s}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      REFRESH_COOKIE_TTL: ${REFRESH_COOKIE_TTL:-720h}
     depends_on:
       auth-service:
         condition: service_started
@@ -173,6 +178,10 @@ services:
     restart: unless-stopped
     environment:
       KAFKA_BROKERS: kafka:9092
+      AUTH_EMAIL_VERIFICATION_TOPIC: auth.email_verification_requested
+      MATCHING_RESPONSE_CREATED_TOPIC: matching.response_created
+      NOTIFICATION_RETRY_ATTEMPTS: ${NOTIFICATION_RETRY_ATTEMPTS:-3}
+      NOTIFICATION_RETRY_BACKOFF: ${NOTIFICATION_RETRY_BACKOFF:-1s}
     depends_on:
       kafka:
         condition: service_healthy

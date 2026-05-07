@@ -13,7 +13,7 @@ Can:
 
 - create PVZ
 - view own PVZ list
-- submit PVZ updates
+- update own PVZ when no active vacancy exists
 - create vacancy for approved own PVZ
 - view responses for own vacancies
 - accept response
@@ -26,7 +26,7 @@ Can:
 Cannot:
 
 - create vacancy for non-approved PVZ
-- submit PVZ update when active vacancy exists
+- update PVZ when active vacancy exists
 - write in finalized chat
 
 ## Worker
