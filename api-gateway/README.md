@@ -7,7 +7,9 @@ Gateway принимает запросы от frontend, валидирует au
 ## Ответственность
 
 - public HTTP API
-- auth middleware
+- HttpOnly cookie auth middleware
+- CSRF validation for authenticated unsafe methods
+- credentialed CORS for configured frontend origins
 - restriction logic for unverified users
 - REST -> gRPC mapping
 - websocket edge for chat
@@ -26,8 +28,6 @@ Gateway принимает запросы от frontend, валидирует au
 
 - `GET /health/live`
 - `GET /health/ready`
-- `GET /openapi.json`
-- `GET /swagger`
 
 ### Auth
 
@@ -51,6 +51,23 @@ Gateway must allow only whitelist endpoints for unverified users:
 - verify email
 - `me` is not available for unverified users
 
+## Web auth transport
+
+The public web API does not use `Authorization: Bearer`.
+
+- `berusmenu_access`: HttpOnly access JWT cookie.
+- `berusmenu_refresh`: HttpOnly refresh token cookie scoped to auth routes.
+- `berusmenu_csrf`: readable CSRF cookie.
+- `X-CSRF-Token`: must match `berusmenu_csrf` for authenticated `POST`, `PATCH`, `PUT`, and `DELETE`.
+
+Gateway validates the access cookie through `auth-service` and forwards identity downstream as gRPC metadata.
+
+The Insomnia collection uses the built-in Cookie template tag for CSRF:
+
+```text
+{% cookie _.base_url, 'berusmenu_csrf' %}
+```
+
 ## Env
 
 | Variable | Default |
@@ -62,6 +79,14 @@ Gateway must allow only whitelist endpoints for unverified users:
 | `COMMUNICATION_GRPC_ADDR` | `localhost:50054` |
 | `REQUEST_TIMEOUT` | `5s` |
 | `APP_ENV` | `local` |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` |
+| `COOKIE_SECURE` | `false` |
+| `COOKIE_DOMAIN` | empty |
+| `ACCESS_COOKIE_NAME` | `berusmenu_access` |
+| `REFRESH_COOKIE_NAME` | `berusmenu_refresh` |
+| `CSRF_COOKIE_NAME` | `berusmenu_csrf` |
+| `CSRF_HEADER_NAME` | `X-CSRF-Token` |
+| `REFRESH_COOKIE_TTL` | `720h` |
 
 ## Local run
 
@@ -75,10 +100,15 @@ go run ./cmd/api-gateway
 go test ./...
 ```
 
+## API documentation
+
+- HTTP API reference: [`docs/http-api.md`](docs/http-api.md)
+- Insomnia import collection: [`insomnia/berusmenu-api.json`](insomnia/berusmenu-api.json)
+
+Every HTTP API behavior change must update both files together with the code.
+
 ## Notes
 
-- `gitlab.com/berusmenu/proto` is connected through `replace => ../proto`
+- `github.com/tmcrypted/berusmenu/proto` is resolved locally through `replace => ../proto`
 - gateway forwards identity through gRPC metadata
 - gateway should stay thin; domain rules stay in owning services
-- built-in OpenAPI JSON is served from `/openapi.json`
-- built-in docs UI is served from `/swagger`

@@ -5,7 +5,7 @@ package berusmenu.matching.v1;
 import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "gitlab.com/berusmenu/proto/gen/go/matching/v1;matchingv1";
+option go_package = "github.com/tmcrypted/berusmenu/proto/gen/go/matching/v1;matchingv1";
 
 message Vacancy {
   int64 id = 1;
@@ -209,6 +209,24 @@ message ListReviewsResponse {
   optional string next_page_token = 2;
 }
 
+message HasActiveVacancyForPvzRequest {
+  int64 pvz_id = 1;
+}
+
+message HasActiveVacancyForPvzResponse {
+  bool has_active_vacancy = 1;
+}
+
+message CheckResponseChatWritableRequest {
+  int64 response_id = 1;
+}
+
+message CheckResponseChatWritableResponse {
+  bool writable = 1;
+  optional int64 assignment_id = 2;
+  optional berusmenu.common.v1.AssignmentStatus assignment_status = 3;
+}
+
 service MatchingService {
   rpc CreateVacancy(CreateVacancyRequest) returns (CreateVacancyResponse);
   rpc GetVacancy(GetVacancyRequest) returns (GetVacancyResponse);
@@ -223,4 +241,6 @@ service MatchingService {
   rpc CreateReview(CreateReviewRequest) returns (CreateReviewResponse);
   rpc CreateReviewReply(CreateReviewReplyRequest) returns (CreateReviewReplyResponse);
   rpc ListReviews(ListReviewsRequest) returns (ListReviewsResponse);
+  rpc HasActiveVacancyForPvz(HasActiveVacancyForPvzRequest) returns (HasActiveVacancyForPvzResponse);
+  rpc CheckResponseChatWritable(CheckResponseChatWritableRequest) returns (CheckResponseChatWritableResponse);
 }

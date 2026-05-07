@@ -103,9 +103,9 @@ Verification policy:
 
 - vacancy можно создать только для approved PVZ
 - owner может редактировать ПВЗ
-- submit update request for PVZ запрещен при active vacancy
+- update request for PVZ запрещен при active vacancy
 - active vacancy для этого правила: `published` и `assigned`
-- после submit update ПВЗ снова становится `pending`
+- после update ПВЗ снова становится `pending`
 - новые vacancy по ПВЗ запрещены, пока ПВЗ не `approved`
 
 ## Chat Rules
@@ -117,6 +117,8 @@ Verification policy:
 
 ## Documentation Expectations
 
+При любом изменении API, контрактов, runtime, env, Docker, service boundaries или developer workflow обязательно проверять и обновлять релевантные `.md` файлы.
+
 При изменении продуктовых решений обновлять:
 
 - root `README.md`
@@ -124,6 +126,11 @@ Verification policy:
 - `docs/system-design.md`
 
 При изменении конкретного сервиса обновлять его локальные docs.
+
+При изменении HTTP API в `api-gateway` обязательно обновлять:
+
+- `api-gateway/docs/http-api.md`
+- `api-gateway/insomnia/berusmenu-api.json`
 
 ## Non-goals for MVP
 

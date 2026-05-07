@@ -7,41 +7,15 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	authv1 "gitlab.com/berusmenu/proto/gen/go/auth/v1"
-	commonv1 "gitlab.com/berusmenu/proto/gen/go/common/v1"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/config"
+	authv1 "github.com/tmcrypted/berusmenu/proto/gen/go/auth/v1"
+	commonv1 "github.com/tmcrypted/berusmenu/proto/gen/go/common/v1"
 	"google.golang.org/grpc"
 )
 
-func TestExtractBearerToken(t *testing.T) {
-	tests := []struct {
-		name      string
-		header    string
-		wantToken string
-		wantOK    bool
-	}{
-		{name: "valid", header: "Bearer abc", wantToken: "abc", wantOK: true},
-		{name: "case insensitive", header: "bearer abc", wantToken: "abc", wantOK: true},
-		{name: "trims token", header: "Bearer   abc  ", wantToken: "abc", wantOK: true},
-		{name: "missing", header: "", wantOK: false},
-		{name: "wrong scheme", header: "Basic abc", wantOK: false},
-		{name: "empty token", header: "Bearer ", wantOK: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotToken, gotOK := ExtractBearerToken(tt.header)
-			if gotOK != tt.wantOK {
-				t.Fatalf("ok = %v, want %v", gotOK, tt.wantOK)
-			}
-			if gotToken != tt.wantToken {
-				t.Fatalf("token = %q, want %q", gotToken, tt.wantToken)
-			}
-		})
-	}
-}
-
 func TestAuthMiddlewareStoresCurrentUser(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	cfg := testConfig()
 	client := &authClientStub{
 		validateResp: &authv1.ValidateTokenResponse{
 			Valid:         true,
@@ -53,7 +27,7 @@ func TestAuthMiddlewareStoresCurrentUser(t *testing.T) {
 	}
 
 	router := gin.New()
-	router.Use(RequestID(), Auth(client))
+	router.Use(RequestID(), Auth(client, cfg))
 	router.GET("/private", func(c *gin.Context) {
 		user, ok := GetCurrentUser(c)
 		if !ok {
@@ -66,7 +40,7 @@ func TestAuthMiddlewareStoresCurrentUser(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/private", nil)
-	req.Header.Set("Authorization", "Bearer token")
+	req.AddCookie(&http.Cookie{Name: cfg.AccessCookieName, Value: "token"})
 	rec := httptest.NewRecorder()
 
 	router.ServeHTTP(rec, req)
@@ -79,10 +53,29 @@ func TestAuthMiddlewareStoresCurrentUser(t *testing.T) {
 	}
 }
 
+func TestAuthMiddlewareRejectsBearerWithoutCookie(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(RequestID(), Auth(&authClientStub{}, testConfig()))
+	router.GET("/private", func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req.Header.Set("Authorization", "Bearer token")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
 func TestAuthMiddlewareRejectsMissingToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(RequestID(), Auth(&authClientStub{}))
+	router.Use(RequestID(), Auth(&authClientStub{}, testConfig()))
 	router.GET("/private", func(c *gin.Context) {
 		c.Status(http.StatusNoContent)
 	})
@@ -94,6 +87,15 @@ func TestAuthMiddlewareRejectsMissingToken(t *testing.T) {
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
+func testConfig() config.Config {
+	return config.Config{
+		AccessCookieName:  "berusmenu_access",
+		RefreshCookieName: "berusmenu_refresh",
+		CSRFCookieName:    "berusmenu_csrf",
+		CSRFHeaderName:    "X-CSRF-Token",
 	}
 }
 

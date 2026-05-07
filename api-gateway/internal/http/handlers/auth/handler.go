@@ -1,74 +1,56 @@
 package auth
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.com/berusmenu/api-gateway/internal/http/middleware"
-	"gitlab.com/berusmenu/api-gateway/internal/http/response"
-	authv1 "gitlab.com/berusmenu/proto/gen/go/auth/v1"
-	commonv1 "gitlab.com/berusmenu/proto/gen/go/common/v1"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/config"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/http/dto"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/http/middleware"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/http/response"
+	authv1 "github.com/tmcrypted/berusmenu/proto/gen/go/auth/v1"
+	commonv1 "github.com/tmcrypted/berusmenu/proto/gen/go/common/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
 type Handler struct {
-	auth authv1.AuthServiceClient
+	auth    authv1.AuthServiceClient
+	cookies cookieManager
+}
+
+type authPayloadResponse struct {
+	User            json.RawMessage `json:"user"`
+	AccessExpiresAt string          `json:"access_expires_at"`
 }
 
 func RegisterRoutes(
 	group *gin.RouterGroup,
+	cfg config.Config,
 	client authv1.AuthServiceClient,
 	authMiddleware gin.HandlerFunc,
+	csrfMiddleware gin.HandlerFunc,
 	verifiedMiddleware gin.HandlerFunc,
 ) {
-	handler := Handler{auth: client}
+	handler := Handler{auth: client, cookies: newCookieManager(cfg)}
 
 	group.POST("/auth/register", handler.Register)
 	group.POST("/auth/login", handler.Login)
 	group.POST("/auth/refresh", handler.Refresh)
-	group.POST("/auth/logout", authMiddleware, handler.Logout)
-	group.POST("/auth/resend-code", authMiddleware, handler.ResendVerificationCode)
-	group.POST("/auth/verify-email", authMiddleware, handler.VerifyEmail)
+	group.POST("/auth/logout", csrfMiddleware, handler.Logout)
+	group.POST("/auth/resend-code", authMiddleware, csrfMiddleware, handler.ResendVerificationCode)
+	group.POST("/auth/verify-email", authMiddleware, csrfMiddleware, handler.VerifyEmail)
 
 	group.GET("/me", authMiddleware, verifiedMiddleware, handler.GetMe)
-	group.PATCH("/me", authMiddleware, verifiedMiddleware, handler.UpdateMe)
-}
-
-type registerRequest struct {
-	Email    string  `json:"email" binding:"required,email"`
-	Password string  `json:"password" binding:"required,min=8"`
-	FullName string  `json:"full_name" binding:"required"`
-	Role     string  `json:"role"`
-	Phone    *string `json:"phone"`
-}
-
-type loginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
-}
-
-type refreshRequest struct {
-	RefreshToken string `json:"refresh_token" binding:"required"`
-}
-
-type logoutRequest struct {
-	RefreshToken string `json:"refresh_token" binding:"required"`
-}
-
-type updateProfileRequest struct {
-	FullName  *string `json:"full_name"`
-	Phone     *string `json:"phone"`
-	AvatarURL *string `json:"avatar_url"`
-}
-
-type verifyEmailRequest struct {
-	Code string `json:"code" binding:"required"`
+	group.PATCH("/me", authMiddleware, verifiedMiddleware, csrfMiddleware, handler.UpdateMe)
 }
 
 func (h Handler) Register(c *gin.Context) {
-	var req registerRequest
+	var req dto.RegisterRequest
 	if !bindJSON(c, &req) {
 		return
 	}
@@ -91,11 +73,11 @@ func (h Handler) Register(c *gin.Context) {
 		return
 	}
 
-	writeAuthPayload(c, http.StatusCreated, res.GetAuth())
+	h.writeAuthPayload(c, http.StatusCreated, res.GetAuth())
 }
 
 func (h Handler) Login(c *gin.Context) {
-	var req loginRequest
+	var req dto.LoginRequest
 	if !bindJSON(c, &req) {
 		return
 	}
@@ -109,39 +91,42 @@ func (h Handler) Login(c *gin.Context) {
 		return
 	}
 
-	writeAuthPayload(c, http.StatusOK, res.GetAuth())
+	h.writeAuthPayload(c, http.StatusOK, res.GetAuth())
 }
 
 func (h Handler) Refresh(c *gin.Context) {
-	var req refreshRequest
-	if !bindJSON(c, &req) {
+	refreshToken, err := c.Cookie(h.cookies.cfg.RefreshCookieName)
+	if err != nil || refreshToken == "" {
+		response.Error(c, http.StatusUnauthorized, "unauthenticated", "missing refresh cookie")
 		return
 	}
 
 	res, err := h.auth.Refresh(c.Request.Context(), &authv1.RefreshRequest{
-		RefreshToken: req.RefreshToken,
+		RefreshToken: refreshToken,
 	})
 	if err != nil {
 		response.FromGRPCError(c, err)
 		return
 	}
 
-	writeAuthPayload(c, http.StatusOK, res.GetAuth())
+	h.writeAuthPayload(c, http.StatusOK, res.GetAuth())
 }
 
 func (h Handler) Logout(c *gin.Context) {
-	var req logoutRequest
-	if !bindJSON(c, &req) {
+	refreshToken, err := c.Cookie(h.cookies.cfg.RefreshCookieName)
+	if err != nil || refreshToken == "" {
+		response.Error(c, http.StatusUnauthorized, "unauthenticated", "missing refresh cookie")
 		return
 	}
 
 	if _, err := h.auth.Logout(c.Request.Context(), &authv1.LogoutRequest{
-		RefreshToken: req.RefreshToken,
+		RefreshToken: refreshToken,
 	}); err != nil {
 		response.FromGRPCError(c, err)
 		return
 	}
 
+	h.cookies.clearAuthCookies(c)
 	c.Status(http.StatusNoContent)
 }
 
@@ -156,7 +141,7 @@ func (h Handler) ResendVerificationCode(c *gin.Context) {
 }
 
 func (h Handler) VerifyEmail(c *gin.Context) {
-	var req verifyEmailRequest
+	var req dto.VerifyEmailRequest
 	if !bindJSON(c, &req) {
 		return
 	}
@@ -191,7 +176,7 @@ func (h Handler) GetMe(c *gin.Context) {
 }
 
 func (h Handler) UpdateMe(c *gin.Context) {
-	var req updateProfileRequest
+	var req dto.UpdateProfileRequest
 	if !bindJSON(c, &req) {
 		return
 	}
@@ -230,8 +215,25 @@ func bindJSON(c *gin.Context, dst any) bool {
 	return true
 }
 
-func writeAuthPayload(c *gin.Context, status int, payload *authv1.AuthPayload) {
-	writeProto(c, status, payload)
+func (h Handler) writeAuthPayload(c *gin.Context, status int, payload *authv1.AuthPayload) {
+	if payload == nil || payload.GetTokens() == nil {
+		response.Error(c, http.StatusInternalServerError, "internal", "empty upstream auth response")
+		return
+	}
+	if err := h.cookies.setAuthCookies(c, payload.GetTokens()); err != nil {
+		response.Error(c, http.StatusInternalServerError, "internal", "failed to create auth cookies")
+		return
+	}
+
+	userJSON, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(payload.GetUser())
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "internal", "failed to encode auth response")
+		return
+	}
+	c.JSON(status, authPayloadResponse{
+		User:            userJSON,
+		AccessExpiresAt: payload.GetTokens().GetAccessExpiresAt().AsTime().UTC().Format(time.RFC3339),
+	})
 }
 
 func writeProto(c *gin.Context, status int, msg proto.Message) {

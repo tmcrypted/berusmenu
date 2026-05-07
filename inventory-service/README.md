@@ -7,7 +7,6 @@
 - create PVZ
 - read owner PVZ list
 - update PVZ data
-- submit update for repeated moderation
 - approve/reject/block PVZ
 
 ## Owned schema
@@ -23,8 +22,8 @@ Tables:
 
 - vacancy can be created only for approved PVZ
 - owner may edit PVZ data
-- submit PVZ update is forbidden if there are active vacancy with status `published` or `assigned`
-- after submit update PVZ returns to `pending`
+- PVZ update is forbidden if there are active vacancy with status `published` or `assigned`
+- after update PVZ returns to `pending`
 
 ## Integrations
 

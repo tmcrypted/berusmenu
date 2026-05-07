@@ -1,10 +1,11 @@
-module gitlab.com/berusmenu/api-gateway
+module github.com/tmcrypted/berusmenu/api-gateway
 
 go 1.25.1
 
 require (
 	github.com/gin-gonic/gin v1.11.0
-	gitlab.com/berusmenu/proto v0.0.0
+	github.com/tmcrypted/berusmenu/proto v0.0.0
+	go.uber.org/mock v0.6.0
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
 )
@@ -31,7 +32,6 @@ require (
 	github.com/quic-go/quic-go v0.54.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.0 // indirect
-	go.uber.org/mock v0.5.0 // indirect
 	golang.org/x/arch v0.20.0 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/mod v0.31.0 // indirect
@@ -43,4 +43,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect
 )
 
-replace gitlab.com/berusmenu/proto => ../proto
+replace github.com/tmcrypted/berusmenu/proto => ../proto

@@ -3,11 +3,11 @@ package grpcclients
 import (
 	"fmt"
 
-	"gitlab.com/berusmenu/api-gateway/internal/config"
-	authv1 "gitlab.com/berusmenu/proto/gen/go/auth/v1"
-	communicationv1 "gitlab.com/berusmenu/proto/gen/go/communication/v1"
-	inventoryv1 "gitlab.com/berusmenu/proto/gen/go/inventory/v1"
-	matchingv1 "gitlab.com/berusmenu/proto/gen/go/matching/v1"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/config"
+	authv1 "github.com/tmcrypted/berusmenu/proto/gen/go/auth/v1"
+	communicationv1 "github.com/tmcrypted/berusmenu/proto/gen/go/communication/v1"
+	inventoryv1 "github.com/tmcrypted/berusmenu/proto/gen/go/inventory/v1"
+	matchingv1 "github.com/tmcrypted/berusmenu/proto/gen/go/matching/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

@@ -1,0 +1,377 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-05-06T00:00:00.000Z",
+  "__export_source": "berusmenu-api-gateway",
+  "resources": [
+    {
+      "_id": "wrk_berusmenu_api",
+      "parentId": null,
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "name": "Berusmenu API",
+      "description": "Manual requests for local Berusmenu API Gateway development.",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_berusmenu_local",
+      "parentId": "wrk_berusmenu_api",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "name": "Local",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "verification_code": ""
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url",
+          "verification_code"
+        ]
+      },
+      "color": "#2f80ed",
+      "isPrivate": false,
+      "metaSortKey": 1778083200000,
+      "_type": "environment"
+    },
+    {
+      "_id": "fld_health",
+      "parentId": "wrk_berusmenu_api",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "name": "Health",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 100,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_auth",
+      "parentId": "wrk_berusmenu_api",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "name": "Auth",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 200,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_profile",
+      "parentId": "wrk_berusmenu_api",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "name": "Profile",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 300,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_health_live",
+      "parentId": "fld_health",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/health/live",
+      "name": "Live",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 100,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_health_ready",
+      "parentId": "fld_health",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/health/ready",
+      "name": "Ready",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 200,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_auth_register",
+      "parentId": "fld_auth",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/auth/register",
+      "name": "Register",
+      "description": "After running, Insomnia stores auth cookies. CSRF headers read berusmenu_csrf from the cookie jar automatically.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"worker@example.com\",\n  \"password\": \"password123\",\n  \"full_name\": \"Worker User\",\n  \"role\": \"worker\",\n  \"phone\": \"+79990001122\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 100,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_auth_login",
+      "parentId": "fld_auth",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/auth/login",
+      "name": "Login",
+      "description": "After running, Insomnia stores auth cookies. CSRF headers read berusmenu_csrf from the cookie jar automatically.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"worker@example.com\",\n  \"password\": \"password123\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 200,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_auth_resend_code",
+      "parentId": "fld_auth",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/auth/resend-code",
+      "name": "Resend Verification Code",
+      "description": "Requires auth cookies and X-CSRF-Token. The code is printed by notification-service logs.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 300,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_auth_verify_email",
+      "parentId": "fld_auth",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/auth/verify-email",
+      "name": "Verify Email",
+      "description": "Set verification_code in the Local environment first.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"code\": \"{{ _.verification_code }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 400,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_auth_refresh",
+      "parentId": "fld_auth",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/auth/refresh",
+      "name": "Refresh",
+      "description": "Uses the berusmenu_refresh cookie from Insomnia cookie jar.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 500,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_auth_logout",
+      "parentId": "fld_auth",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/auth/logout",
+      "name": "Logout",
+      "description": "Revokes the berusmenu_refresh cookie session and clears auth cookies.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 600,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_profile_get_me",
+      "parentId": "fld_profile",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/me",
+      "name": "Get Me",
+      "description": "Requires a verified email.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 100,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_profile_update_me",
+      "parentId": "fld_profile",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/me",
+      "name": "Update Me",
+      "description": "Requires a verified email. Omitted fields are unchanged.",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"full_name\": \"Updated Worker User\",\n  \"phone\": \"+79990001122\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 200,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    }
+  ]
+}

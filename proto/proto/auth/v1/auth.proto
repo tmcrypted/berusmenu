@@ -5,7 +5,7 @@ package berusmenu.auth.v1;
 import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "gitlab.com/berusmenu/proto/gen/go/auth/v1;authv1";
+option go_package = "github.com/tmcrypted/berusmenu/proto/gen/go/auth/v1;authv1";
 
 message User {
   int64 id = 1;

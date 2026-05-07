@@ -4,6 +4,14 @@ Berusmenu is a service that helps PVZ owners in Russia urgently find a worker fo
 
 This workspace is a monorepo for the MVP. All microservices live in this single repository, maintaining strict architectural boundaries and database isolation.
 
+Canonical Go import path:
+
+- `github.com/tmcrypted/berusmenu/...`
+
+Local Go workspace:
+
+- `go.work` joins `proto`, `api-gateway`, `auth-service`, and `notification-service` for local development.
+
 ## Структура монорепозитория
 
 Текущий набор директорий (микросервисов и общих компонентов):
@@ -46,11 +54,15 @@ This workspace is a monorepo for the MVP. All microservices live in this single 
 - Одна PostgreSQL база, но отдельная схема на сервис.
 - FK только внутри схем сервиса.
 - Публичный API идет через `api-gateway`.
+- Web auth использует HttpOnly cookies для access/refresh tokens; frontend не хранит токены в JavaScript.
+- Gateway выполняет cookie/CSRF проверки на HTTP-границе и передает identity во внутренние gRPC metadata.
 - Внутренние вызовы между backend-сервисами идут по gRPC.
+- Gateway stays thin; cross-domain business checks live in owning services.
 - Kafka в MVP используется только для notification events.
 - Redis в MVP используется для verification/rate limiting/presence.
 - `notification-service` отделен от доменных сервисов и не имеет своей БД в MVP.
-- Email provider в MVP: Mailganer.
+- Email channel в MVP: log/stub sender для local development; Mailganer planned as production provider.
+- PVZ update directly mutates `inventory.pvz`, sets it back to `pending`, and is forbidden while active vacancy exists.
 - Chat создается сразу после `response`.
 - Chat становится read-only после `assignment.completed` и `assignment.cancelled`.
 
@@ -65,7 +77,12 @@ Notification delivery channel:
 
 - email only
 
-Delivery выполняет `notification-service`, который читает события из Kafka и отправляет письма через Mailganer.
+Delivery выполняет `notification-service`, который читает события из Kafka и передает их в email sender abstraction. В local development sender пишет email-заглушки в logs; Mailganer остается planned production provider.
+
+Kafka bootstrap addresses:
+
+- Docker compose services use `kafka:9092`.
+- Host-side `go run` services use `localhost:19092`.
 
 ## Redis Usage
 
@@ -83,7 +100,7 @@ Redis используется для:
 
 ## Unverified Users
 
-При регистрации пользователь получает JWT, но пока email не подтвержден, backend разрешает только whitelist endpoints:
+При регистрации gateway ставит auth cookies, но пока email не подтвержден, backend разрешает только whitelist endpoints:
 
 - `logout`
 - `resend verification code`
@@ -92,29 +109,37 @@ Redis используется для:
 
 Все остальные действия запрещены на backend, а frontend перенаправляет пользователя на экран подтверждения email.
 
+## Web Auth Security
+
+- `berusmenu_access` and `berusmenu_refresh` are HttpOnly cookies.
+- `berusmenu_csrf` is readable by frontend and must be sent as `X-CSRF-Token` for authenticated unsafe requests.
+- `Authorization: Bearer` is not used by the public web API.
+- Refresh token revocation is stored in `auth.refresh_sessions` through hashed tokens and `revoked_at`.
+
 ## Documentation Map
 
-- [AGENTS.md](C:/Users/tmcrypted/Desktop/berusmenu/AGENTS.md)
-- [Architecture](C:/Users/tmcrypted/Desktop/berusmenu/docs/architecture.md)
-- [System Design](C:/Users/tmcrypted/Desktop/berusmenu/docs/system-design.md)
-- [Sequence Diagrams](C:/Users/tmcrypted/Desktop/berusmenu/docs/sequence-diagrams.md)
-- [State Transitions](C:/Users/tmcrypted/Desktop/berusmenu/docs/state-transitions.md)
-- [Permissions](C:/Users/tmcrypted/Desktop/berusmenu/docs/permissions.md)
-- [Interfaces](C:/Users/tmcrypted/Desktop/berusmenu/docs/interfaces.md)
-- [Events And Cache](C:/Users/tmcrypted/Desktop/berusmenu/docs/events-and-cache.md)
-- [Runtime Topology](C:/Users/tmcrypted/Desktop/berusmenu/docs/runtime-topology.md)
-- [Development Plan](C:/Users/tmcrypted/Desktop/berusmenu/docs/development-plan.md)
+- [AGENTS.md](AGENTS.md)
+- [HTTP API](api-gateway/docs/http-api.md)
+- [Insomnia Collection](api-gateway/insomnia/berusmenu-api.json)
+- [Architecture](docs/architecture.md)
+- [System Design](docs/system-design.md)
+- [Sequence Diagrams](docs/sequence-diagrams.md)
+- [State Transitions](docs/state-transitions.md)
+- [Permissions](docs/permissions.md)
+- [Interfaces](docs/interfaces.md)
+- [Events And Cache](docs/events-and-cache.md)
+- [Runtime Topology](docs/runtime-topology.md)
+- [Development Plan](docs/development-plan.md)
 
 ## Что дальше
 
 Следующие инженерные шаги:
 
-1. Freeze gRPC and REST contracts.
-2. Подготовить goose migrations по схемам.
-3. Реализовать `notification-service`.
-4. Реализовать `auth-service`.
-5. Реализовать `inventory-service`.
-6. Реализовать `matching-service`.
-7. Реализовать `communication-service`.
-8. Доработать `api-gateway`.
-9. Реализовать frontend flows.
+1. Довести REST/gRPC contracts для `inventory-service`, `matching-service`, `communication-service`.
+2. Реализовать `inventory-service`.
+3. Реализовать `matching-service`.
+4. Реализовать `communication-service`.
+5. Доработать `api-gateway` REST -> gRPC mapping для доменных сервисов.
+6. Реализовать frontend flows.
+7. Добавить integration tests для основных business paths.
+8. Описать production deployment notes в `infrastructure`.

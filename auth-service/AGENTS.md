@@ -1,8 +1,8 @@
 # AGENTS
 
-See the global guide first: [../AGENTS.md](C:/Users/tmcrypted/Desktop/berusmenu/AGENTS.md)
+See the global guide first: [../AGENTS.md](../AGENTS.md)
 
-## Repo Role
+## Service Role
 
 `auth-service` owns identity, sessions and email verification.
 

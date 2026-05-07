@@ -7,11 +7,15 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.com/berusmenu/api-gateway/internal/http/middleware"
-	authv1 "gitlab.com/berusmenu/proto/gen/go/auth/v1"
-	commonv1 "gitlab.com/berusmenu/proto/gen/go/common/v1"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/config"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/http/middleware"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/mock"
+	authv1 "github.com/tmcrypted/berusmenu/proto/gen/go/auth/v1"
+	commonv1 "github.com/tmcrypted/berusmenu/proto/gen/go/common/v1"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -49,9 +53,21 @@ func TestParseUserRole(t *testing.T) {
 }
 
 func TestRegisterSuccess(t *testing.T) {
-	client := &authClientFake{
-		registerResp: &authv1.RegisterResponse{Auth: sampleAuthPayload(false)},
-	}
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	client.EXPECT().Register(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, req *authv1.RegisterRequest, opts ...grpc.CallOption) (*authv1.RegisterResponse, error) {
+			if req.GetRole() != commonv1.UserRole_USER_ROLE_OWNER {
+				t.Errorf("role = %s, want owner", req.GetRole())
+			}
+			if req.GetFullName() != "Owner User" {
+				t.Errorf("full_name = %q, want Owner User", req.GetFullName())
+			}
+			return &authv1.RegisterResponse{Auth: sampleAuthPayload(false)}, nil
+		},
+	)
+
 	router := newTestRouter(client)
 
 	rec := doJSON(router, http.MethodPost, "/v1/auth/register", `{
@@ -64,19 +80,19 @@ func TestRegisterSuccess(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusCreated, rec.Body.String())
 	}
-	if client.registerReq.GetRole() != commonv1.UserRole_USER_ROLE_OWNER {
-		t.Fatalf("role = %s, want owner", client.registerReq.GetRole())
+	if strings.Contains(rec.Body.String(), "access_token") || strings.Contains(rec.Body.String(), "refresh_token") {
+		t.Fatalf("response leaked tokens: %s", rec.Body.String())
 	}
-	if client.registerReq.GetFullName() != "Owner User" {
-		t.Fatalf("full_name = %q, want Owner User", client.registerReq.GetFullName())
-	}
-	if !strings.Contains(rec.Body.String(), `"access_token":"access"`) {
-		t.Fatalf("response does not contain access token: %s", rec.Body.String())
+	if cookieValue(rec, "berusmenu_access") != "access" || cookieValue(rec, "berusmenu_refresh") != "refresh" {
+		t.Fatalf("auth cookies were not set: %v", rec.Result().Cookies())
 	}
 }
 
 func TestRegisterValidationFailure(t *testing.T) {
-	router := newTestRouter(&authClientFake{})
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	router := newTestRouter(client)
 
 	rec := doJSON(router, http.MethodPost, "/v1/auth/register", `{
 		"email":"bad",
@@ -90,9 +106,11 @@ func TestRegisterValidationFailure(t *testing.T) {
 }
 
 func TestLoginWrongCredentials(t *testing.T) {
-	client := &authClientFake{
-		loginErr: status.Error(codes.Unauthenticated, "bad credentials"),
-	}
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	client.EXPECT().Login(gomock.Any(), gomock.Any()).Return(nil, status.Error(codes.Unauthenticated, "bad credentials"))
+
 	router := newTestRouter(client)
 
 	rec := doJSON(router, http.MethodPost, "/v1/auth/login", `{
@@ -109,7 +127,10 @@ func TestLoginWrongCredentials(t *testing.T) {
 }
 
 func TestResendVerificationCodeRequiresToken(t *testing.T) {
-	router := newTestRouter(&authClientFake{})
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	router := newTestRouter(client)
 
 	rec := doJSON(router, http.MethodPost, "/v1/auth/resend-code", `{}`, "")
 
@@ -119,22 +140,25 @@ func TestResendVerificationCodeRequiresToken(t *testing.T) {
 }
 
 func TestResendVerificationCodeSuccess(t *testing.T) {
-	client := &authClientFake{
-		validateResp: &authv1.ValidateTokenResponse{
-			Valid:         true,
-			UserId:        7,
-			Role:          commonv1.UserRole_USER_ROLE_WORKER,
-			Email:         "worker@example.com",
-			EmailVerified: false,
-		},
-		resendResp: &authv1.ResendVerificationCodeResponse{
-			CodeExpiresAt:     timestamppb.Now(),
-			ResendAvailableAt: timestamppb.Now(),
-		},
-	}
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	client.EXPECT().ValidateToken(gomock.Any(), gomock.Any()).Return(&authv1.ValidateTokenResponse{
+		Valid:         true,
+		UserId:        7,
+		Role:          commonv1.UserRole_USER_ROLE_WORKER,
+		Email:         "worker@example.com",
+		EmailVerified: false,
+	}, nil)
+
+	client.EXPECT().ResendVerificationCode(gomock.Any(), gomock.Any()).Return(&authv1.ResendVerificationCodeResponse{
+		CodeExpiresAt:     timestamppb.Now(),
+		ResendAvailableAt: timestamppb.Now(),
+	}, nil)
+
 	router := newTestRouter(client)
 
-	rec := doJSON(router, http.MethodPost, "/v1/auth/resend-code", `{}`, "Bearer access")
+	rec := doJSON(router, http.MethodPost, "/v1/auth/resend-code", `{}`, "access")
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
@@ -142,30 +166,120 @@ func TestResendVerificationCodeSuccess(t *testing.T) {
 }
 
 func TestVerifyEmailSuccess(t *testing.T) {
-	client := &authClientFake{
-		validateResp: &authv1.ValidateTokenResponse{
-			Valid:         true,
-			UserId:        7,
-			Role:          commonv1.UserRole_USER_ROLE_WORKER,
-			Email:         "worker@example.com",
-			EmailVerified: false,
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	client.EXPECT().ValidateToken(gomock.Any(), gomock.Any()).Return(&authv1.ValidateTokenResponse{
+		Valid:         true,
+		UserId:        7,
+		Role:          commonv1.UserRole_USER_ROLE_WORKER,
+		Email:         "worker@example.com",
+		EmailVerified: false,
+	}, nil)
+
+	client.EXPECT().VerifyEmail(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, req *authv1.VerifyEmailRequest, opts ...grpc.CallOption) (*authv1.VerifyEmailResponse, error) {
+			if req.GetCode() != "123456" {
+				t.Errorf("code = %q, want 123456", req.GetCode())
+			}
+			return &authv1.VerifyEmailResponse{User: sampleUser(true)}, nil
 		},
-		verifyResp: &authv1.VerifyEmailResponse{User: sampleUser(true)},
-	}
+	)
+
 	router := newTestRouter(client)
 
-	rec := doJSON(router, http.MethodPost, "/v1/auth/verify-email", `{"code":"123456"}`, "Bearer access")
+	rec := doJSON(router, http.MethodPost, "/v1/auth/verify-email", `{"code":"123456"}`, "access")
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
 	}
-	if client.verifyReq.GetCode() != "123456" {
-		t.Fatalf("code = %q, want 123456", client.verifyReq.GetCode())
+}
+
+func TestRefreshReadsCookieAndRotatesCookies(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	client.EXPECT().Refresh(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, req *authv1.RefreshRequest, opts ...grpc.CallOption) (*authv1.RefreshResponse, error) {
+			if req.GetRefreshToken() != "old-refresh" {
+				t.Errorf("refresh_token = %q, want old-refresh", req.GetRefreshToken())
+			}
+			return &authv1.RefreshResponse{Auth: sampleAuthPayload(true)}, nil
+		},
+	)
+
+	router := newTestRouter(client)
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/refresh", nil)
+	req.AddCookie(&http.Cookie{Name: "berusmenu_refresh", Value: "old-refresh"})
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if cookieValue(rec, "berusmenu_access") != "access" || cookieValue(rec, "berusmenu_refresh") != "refresh" {
+		t.Fatalf("rotated cookies were not set: %v", rec.Result().Cookies())
+	}
+}
+
+func TestLogoutClearsCookies(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	client.EXPECT().Logout(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, req *authv1.LogoutRequest, opts ...grpc.CallOption) (*authv1.LogoutResponse, error) {
+			if req.GetRefreshToken() != "refresh" {
+				t.Errorf("refresh_token = %q, want refresh", req.GetRefreshToken())
+			}
+			return &authv1.LogoutResponse{}, nil
+		},
+	)
+
+	router := newTestRouter(client)
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", nil)
+	req.AddCookie(&http.Cookie{Name: "berusmenu_refresh", Value: "refresh"})
+	req.AddCookie(&http.Cookie{Name: "berusmenu_csrf", Value: "csrf"})
+	req.Header.Set("X-CSRF-Token", "csrf")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusNoContent, rec.Body.String())
+	}
+	if maxAgeForCookie(rec, "berusmenu_access") >= 0 || maxAgeForCookie(rec, "berusmenu_refresh") >= 0 {
+		t.Fatalf("auth cookies were not cleared: %v", rec.Result().Cookies())
+	}
+}
+
+func TestProtectedUnsafeEndpointRequiresCSRF(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	client.EXPECT().ValidateToken(gomock.Any(), gomock.Any()).Return(&authv1.ValidateTokenResponse{
+		Valid:         true,
+		UserId:        7,
+		Role:          commonv1.UserRole_USER_ROLE_WORKER,
+		Email:         "worker@example.com",
+		EmailVerified: true,
+	}, nil)
+
+	router := newTestRouter(client)
+	req := httptest.NewRequest(http.MethodPatch, "/v1/me", strings.NewReader(`{"full_name":"New Name"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: "berusmenu_access", Value: "access"})
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusForbidden, rec.Body.String())
 	}
 }
 
 func TestGetMeRequiresToken(t *testing.T) {
-	router := newTestRouter(&authClientFake{})
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	router := newTestRouter(client)
 
 	rec := doJSON(router, http.MethodGet, "/v1/me", "", "")
 
@@ -175,18 +289,20 @@ func TestGetMeRequiresToken(t *testing.T) {
 }
 
 func TestGetMeRejectsUnverifiedUser(t *testing.T) {
-	client := &authClientFake{
-		validateResp: &authv1.ValidateTokenResponse{
-			Valid:         true,
-			UserId:        7,
-			Role:          commonv1.UserRole_USER_ROLE_WORKER,
-			Email:         "worker@example.com",
-			EmailVerified: false,
-		},
-	}
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	client.EXPECT().ValidateToken(gomock.Any(), gomock.Any()).Return(&authv1.ValidateTokenResponse{
+		Valid:         true,
+		UserId:        7,
+		Role:          commonv1.UserRole_USER_ROLE_WORKER,
+		Email:         "worker@example.com",
+		EmailVerified: false,
+	}, nil)
+
 	router := newTestRouter(client)
 
-	rec := doJSON(router, http.MethodGet, "/v1/me", "", "Bearer access")
+	rec := doJSON(router, http.MethodGet, "/v1/me", "", "access")
 
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusForbidden, rec.Body.String())
@@ -194,57 +310,77 @@ func TestGetMeRejectsUnverifiedUser(t *testing.T) {
 }
 
 func TestGetMeSuccessUsesIdentityMetadata(t *testing.T) {
-	client := &authClientFake{
-		validateResp: &authv1.ValidateTokenResponse{
-			Valid:         true,
-			UserId:        7,
-			Role:          commonv1.UserRole_USER_ROLE_WORKER,
-			Email:         "worker@example.com",
-			EmailVerified: true,
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	client.EXPECT().ValidateToken(gomock.Any(), gomock.Any()).Return(&authv1.ValidateTokenResponse{
+		Valid:         true,
+		UserId:        7,
+		Role:          commonv1.UserRole_USER_ROLE_WORKER,
+		Email:         "worker@example.com",
+		EmailVerified: true,
+	}, nil)
+
+	client.EXPECT().GetUser(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, req *authv1.GetUserRequest, opts ...grpc.CallOption) (*authv1.GetUserResponse, error) {
+			if req.GetUserId() != 7 {
+				t.Errorf("user_id = %d, want 7", req.GetUserId())
+			}
+
+			md, ok := metadata.FromOutgoingContext(ctx)
+			if !ok {
+				t.Errorf("missing outgoing metadata")
+			} else {
+				if got := md.Get("x-user-id"); len(got) != 1 || got[0] != "7" {
+					t.Errorf("x-user-id metadata = %v, want [7]", got)
+				}
+				if got := md.Get("x-user-email-verified"); len(got) != 1 || got[0] != "true" {
+					t.Errorf("x-user-email-verified metadata = %v, want [true]", got)
+				}
+			}
+			return &authv1.GetUserResponse{User: sampleUser(true)}, nil
 		},
-		getUserResp: &authv1.GetUserResponse{User: sampleUser(true)},
-	}
+	)
+
 	router := newTestRouter(client)
 
-	rec := doJSON(router, http.MethodGet, "/v1/me", "", "Bearer access")
+	rec := doJSON(router, http.MethodGet, "/v1/me", "", "access")
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
-	}
-	if client.getUserReq.GetUserId() != 7 {
-		t.Fatalf("user_id = %d, want 7", client.getUserReq.GetUserId())
-	}
-	if got := client.outgoingMD.Get("x-user-id"); len(got) != 1 || got[0] != "7" {
-		t.Fatalf("x-user-id metadata = %v, want [7]", got)
-	}
-	if got := client.outgoingMD.Get("x-user-email-verified"); len(got) != 1 || got[0] != "true" {
-		t.Fatalf("x-user-email-verified metadata = %v, want [true]", got)
 	}
 }
 
 func TestUpdateMeSendsOnlyProvidedFields(t *testing.T) {
-	client := &authClientFake{
-		validateResp: &authv1.ValidateTokenResponse{
-			Valid:         true,
-			UserId:        7,
-			Role:          commonv1.UserRole_USER_ROLE_WORKER,
-			Email:         "worker@example.com",
-			EmailVerified: true,
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	client.EXPECT().ValidateToken(gomock.Any(), gomock.Any()).Return(&authv1.ValidateTokenResponse{
+		Valid:         true,
+		UserId:        7,
+		Role:          commonv1.UserRole_USER_ROLE_WORKER,
+		Email:         "worker@example.com",
+		EmailVerified: true,
+	}, nil)
+
+	client.EXPECT().UpdateProfile(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, req *authv1.UpdateProfileRequest, opts ...grpc.CallOption) (*authv1.UpdateProfileResponse, error) {
+			if req.FullName == nil || req.GetFullName() != "New Name" {
+				t.Errorf("full_name = %v, want New Name", req.FullName)
+			}
+			if req.Phone != nil || req.AvatarUrl != nil {
+				t.Errorf("unexpected optional fields: %+v", req)
+			}
+			return &authv1.UpdateProfileResponse{User: sampleUser(true)}, nil
 		},
-		updateResp: &authv1.UpdateProfileResponse{User: sampleUser(true)},
-	}
+	)
+
 	router := newTestRouter(client)
 
-	rec := doJSON(router, http.MethodPatch, "/v1/me", `{"full_name":"New Name"}`, "Bearer access")
+	rec := doJSON(router, http.MethodPatch, "/v1/me", `{"full_name":"New Name"}`, "access")
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
-	}
-	if client.updateReq.FullName == nil || client.updateReq.GetFullName() != "New Name" {
-		t.Fatalf("full_name = %v, want New Name", client.updateReq.FullName)
-	}
-	if client.updateReq.Phone != nil || client.updateReq.AvatarUrl != nil {
-		t.Fatalf("unexpected optional fields: %+v", client.updateReq)
 	}
 }
 
@@ -252,11 +388,12 @@ func newTestRouter(client authv1.AuthServiceClient) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(middleware.RequestID())
-	RegisterRoutes(router.Group("/v1"), client, middleware.Auth(client), middleware.RequireVerified())
+	cfg := testGatewayConfig()
+	RegisterRoutes(router.Group("/v1"), cfg, client, middleware.Auth(client, cfg), middleware.CSRF(cfg), middleware.RequireVerified())
 	return router
 }
 
-func doJSON(router *gin.Engine, method string, path string, body string, authHeader string) *httptest.ResponseRecorder {
+func doJSON(router *gin.Engine, method string, path string, body string, accessToken string) *httptest.ResponseRecorder {
 	var reader *bytes.Reader
 	if body == "" {
 		reader = bytes.NewReader(nil)
@@ -266,13 +403,45 @@ func doJSON(router *gin.Engine, method string, path string, body string, authHea
 
 	req := httptest.NewRequest(method, path, reader)
 	req.Header.Set("Content-Type", "application/json")
-	if authHeader != "" {
-		req.Header.Set("Authorization", authHeader)
+	if accessToken != "" {
+		req.AddCookie(&http.Cookie{Name: "berusmenu_access", Value: accessToken})
+		if method == http.MethodPost || method == http.MethodPatch || method == http.MethodPut || method == http.MethodDelete {
+			req.AddCookie(&http.Cookie{Name: "berusmenu_csrf", Value: "csrf"})
+			req.Header.Set("X-CSRF-Token", "csrf")
+		}
 	}
 
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	return rec
+}
+
+func cookieValue(rec *httptest.ResponseRecorder, name string) string {
+	for _, cookie := range rec.Result().Cookies() {
+		if cookie.Name == name {
+			return cookie.Value
+		}
+	}
+	return ""
+}
+
+func maxAgeForCookie(rec *httptest.ResponseRecorder, name string) int {
+	for _, cookie := range rec.Result().Cookies() {
+		if cookie.Name == name {
+			return cookie.MaxAge
+		}
+	}
+	return 0
+}
+
+func testGatewayConfig() config.Config {
+	return config.Config{
+		AccessCookieName:  "berusmenu_access",
+		RefreshCookieName: "berusmenu_refresh",
+		CSRFCookieName:    "berusmenu_csrf",
+		CSRFHeaderName:    "X-CSRF-Token",
+		RefreshCookieTTL:  30 * 24 * time.Hour,
+	}
 }
 
 func sampleAuthPayload(verified bool) *authv1.AuthPayload {
@@ -299,119 +468,4 @@ func sampleUser(verified bool) *authv1.User {
 		user.EmailVerifiedAt = timestamppb.Now()
 	}
 	return user
-}
-
-type authClientFake struct {
-	registerReq  *authv1.RegisterRequest
-	registerResp *authv1.RegisterResponse
-	registerErr  error
-
-	loginResp *authv1.LoginResponse
-	loginErr  error
-
-	refreshResp *authv1.RefreshResponse
-	refreshErr  error
-
-	logoutErr error
-
-	validateResp *authv1.ValidateTokenResponse
-	validateErr  error
-
-	getUserReq  *authv1.GetUserRequest
-	getUserResp *authv1.GetUserResponse
-	getUserErr  error
-
-	updateReq  *authv1.UpdateProfileRequest
-	updateResp *authv1.UpdateProfileResponse
-	updateErr  error
-
-	resendResp *authv1.ResendVerificationCodeResponse
-	resendErr  error
-
-	verifyReq  *authv1.VerifyEmailRequest
-	verifyResp *authv1.VerifyEmailResponse
-	verifyErr  error
-
-	outgoingMD metadata.MD
-}
-
-func (f *authClientFake) Register(ctx context.Context, req *authv1.RegisterRequest, opts ...grpc.CallOption) (*authv1.RegisterResponse, error) {
-	f.registerReq = req
-	if f.registerErr != nil {
-		return nil, f.registerErr
-	}
-	return f.registerResp, nil
-}
-
-func (f *authClientFake) Login(ctx context.Context, req *authv1.LoginRequest, opts ...grpc.CallOption) (*authv1.LoginResponse, error) {
-	if f.loginErr != nil {
-		return nil, f.loginErr
-	}
-	if f.loginResp != nil {
-		return f.loginResp, nil
-	}
-	return &authv1.LoginResponse{Auth: sampleAuthPayload(true)}, nil
-}
-
-func (f *authClientFake) Refresh(ctx context.Context, req *authv1.RefreshRequest, opts ...grpc.CallOption) (*authv1.RefreshResponse, error) {
-	if f.refreshErr != nil {
-		return nil, f.refreshErr
-	}
-	if f.refreshResp != nil {
-		return f.refreshResp, nil
-	}
-	return &authv1.RefreshResponse{Auth: sampleAuthPayload(true)}, nil
-}
-
-func (f *authClientFake) Logout(ctx context.Context, req *authv1.LogoutRequest, opts ...grpc.CallOption) (*authv1.LogoutResponse, error) {
-	if f.logoutErr != nil {
-		return nil, f.logoutErr
-	}
-	return &authv1.LogoutResponse{}, nil
-}
-
-func (f *authClientFake) ValidateToken(ctx context.Context, req *authv1.ValidateTokenRequest, opts ...grpc.CallOption) (*authv1.ValidateTokenResponse, error) {
-	if f.validateErr != nil {
-		return nil, f.validateErr
-	}
-	if f.validateResp != nil {
-		return f.validateResp, nil
-	}
-	return &authv1.ValidateTokenResponse{Valid: false}, nil
-}
-
-func (f *authClientFake) GetUser(ctx context.Context, req *authv1.GetUserRequest, opts ...grpc.CallOption) (*authv1.GetUserResponse, error) {
-	f.getUserReq = req
-	f.outgoingMD, _ = metadata.FromOutgoingContext(ctx)
-	if f.getUserErr != nil {
-		return nil, f.getUserErr
-	}
-	return f.getUserResp, nil
-}
-
-func (f *authClientFake) UpdateProfile(ctx context.Context, req *authv1.UpdateProfileRequest, opts ...grpc.CallOption) (*authv1.UpdateProfileResponse, error) {
-	f.updateReq = req
-	f.outgoingMD, _ = metadata.FromOutgoingContext(ctx)
-	if f.updateErr != nil {
-		return nil, f.updateErr
-	}
-	return f.updateResp, nil
-}
-
-func (f *authClientFake) ResendVerificationCode(ctx context.Context, req *authv1.ResendVerificationCodeRequest, opts ...grpc.CallOption) (*authv1.ResendVerificationCodeResponse, error) {
-	if f.resendErr != nil {
-		return nil, f.resendErr
-	}
-	if f.resendResp != nil {
-		return f.resendResp, nil
-	}
-	return &authv1.ResendVerificationCodeResponse{}, nil
-}
-
-func (f *authClientFake) VerifyEmail(ctx context.Context, req *authv1.VerifyEmailRequest, opts ...grpc.CallOption) (*authv1.VerifyEmailResponse, error) {
-	f.verifyReq = req
-	if f.verifyErr != nil {
-		return nil, f.verifyErr
-	}
-	return f.verifyResp, nil
 }

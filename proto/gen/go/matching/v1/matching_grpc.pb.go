@@ -19,19 +19,21 @@ import (
 const _ = grpc.SupportPackageIsVersion8
 
 const (
-	MatchingService_CreateVacancy_FullMethodName           = "/berusmenu.matching.v1.MatchingService/CreateVacancy"
-	MatchingService_GetVacancy_FullMethodName              = "/berusmenu.matching.v1.MatchingService/GetVacancy"
-	MatchingService_ListVacancies_FullMethodName           = "/berusmenu.matching.v1.MatchingService/ListVacancies"
-	MatchingService_ListOwnerVacancies_FullMethodName      = "/berusmenu.matching.v1.MatchingService/ListOwnerVacancies"
-	MatchingService_CreateResponse_FullMethodName          = "/berusmenu.matching.v1.MatchingService/CreateResponse"
-	MatchingService_WithdrawResponse_FullMethodName        = "/berusmenu.matching.v1.MatchingService/WithdrawResponse"
-	MatchingService_ListResponsesForVacancy_FullMethodName = "/berusmenu.matching.v1.MatchingService/ListResponsesForVacancy"
-	MatchingService_AcceptResponse_FullMethodName          = "/berusmenu.matching.v1.MatchingService/AcceptResponse"
-	MatchingService_CancelAssignment_FullMethodName        = "/berusmenu.matching.v1.MatchingService/CancelAssignment"
-	MatchingService_CompleteAssignment_FullMethodName      = "/berusmenu.matching.v1.MatchingService/CompleteAssignment"
-	MatchingService_CreateReview_FullMethodName            = "/berusmenu.matching.v1.MatchingService/CreateReview"
-	MatchingService_CreateReviewReply_FullMethodName       = "/berusmenu.matching.v1.MatchingService/CreateReviewReply"
-	MatchingService_ListReviews_FullMethodName             = "/berusmenu.matching.v1.MatchingService/ListReviews"
+	MatchingService_CreateVacancy_FullMethodName             = "/berusmenu.matching.v1.MatchingService/CreateVacancy"
+	MatchingService_GetVacancy_FullMethodName                = "/berusmenu.matching.v1.MatchingService/GetVacancy"
+	MatchingService_ListVacancies_FullMethodName             = "/berusmenu.matching.v1.MatchingService/ListVacancies"
+	MatchingService_ListOwnerVacancies_FullMethodName        = "/berusmenu.matching.v1.MatchingService/ListOwnerVacancies"
+	MatchingService_CreateResponse_FullMethodName            = "/berusmenu.matching.v1.MatchingService/CreateResponse"
+	MatchingService_WithdrawResponse_FullMethodName          = "/berusmenu.matching.v1.MatchingService/WithdrawResponse"
+	MatchingService_ListResponsesForVacancy_FullMethodName   = "/berusmenu.matching.v1.MatchingService/ListResponsesForVacancy"
+	MatchingService_AcceptResponse_FullMethodName            = "/berusmenu.matching.v1.MatchingService/AcceptResponse"
+	MatchingService_CancelAssignment_FullMethodName          = "/berusmenu.matching.v1.MatchingService/CancelAssignment"
+	MatchingService_CompleteAssignment_FullMethodName        = "/berusmenu.matching.v1.MatchingService/CompleteAssignment"
+	MatchingService_CreateReview_FullMethodName              = "/berusmenu.matching.v1.MatchingService/CreateReview"
+	MatchingService_CreateReviewReply_FullMethodName         = "/berusmenu.matching.v1.MatchingService/CreateReviewReply"
+	MatchingService_ListReviews_FullMethodName               = "/berusmenu.matching.v1.MatchingService/ListReviews"
+	MatchingService_HasActiveVacancyForPvz_FullMethodName    = "/berusmenu.matching.v1.MatchingService/HasActiveVacancyForPvz"
+	MatchingService_CheckResponseChatWritable_FullMethodName = "/berusmenu.matching.v1.MatchingService/CheckResponseChatWritable"
 )
 
 // MatchingServiceClient is the client API for MatchingService service.
@@ -51,6 +53,8 @@ type MatchingServiceClient interface {
 	CreateReview(ctx context.Context, in *CreateReviewRequest, opts ...grpc.CallOption) (*CreateReviewResponse, error)
 	CreateReviewReply(ctx context.Context, in *CreateReviewReplyRequest, opts ...grpc.CallOption) (*CreateReviewReplyResponse, error)
 	ListReviews(ctx context.Context, in *ListReviewsRequest, opts ...grpc.CallOption) (*ListReviewsResponse, error)
+	HasActiveVacancyForPvz(ctx context.Context, in *HasActiveVacancyForPvzRequest, opts ...grpc.CallOption) (*HasActiveVacancyForPvzResponse, error)
+	CheckResponseChatWritable(ctx context.Context, in *CheckResponseChatWritableRequest, opts ...grpc.CallOption) (*CheckResponseChatWritableResponse, error)
 }
 
 type matchingServiceClient struct {
@@ -191,6 +195,26 @@ func (c *matchingServiceClient) ListReviews(ctx context.Context, in *ListReviews
 	return out, nil
 }
 
+func (c *matchingServiceClient) HasActiveVacancyForPvz(ctx context.Context, in *HasActiveVacancyForPvzRequest, opts ...grpc.CallOption) (*HasActiveVacancyForPvzResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HasActiveVacancyForPvzResponse)
+	err := c.cc.Invoke(ctx, MatchingService_HasActiveVacancyForPvz_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *matchingServiceClient) CheckResponseChatWritable(ctx context.Context, in *CheckResponseChatWritableRequest, opts ...grpc.CallOption) (*CheckResponseChatWritableResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CheckResponseChatWritableResponse)
+	err := c.cc.Invoke(ctx, MatchingService_CheckResponseChatWritable_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MatchingServiceServer is the server API for MatchingService service.
 // All implementations must embed UnimplementedMatchingServiceServer
 // for forward compatibility
@@ -208,6 +232,8 @@ type MatchingServiceServer interface {
 	CreateReview(context.Context, *CreateReviewRequest) (*CreateReviewResponse, error)
 	CreateReviewReply(context.Context, *CreateReviewReplyRequest) (*CreateReviewReplyResponse, error)
 	ListReviews(context.Context, *ListReviewsRequest) (*ListReviewsResponse, error)
+	HasActiveVacancyForPvz(context.Context, *HasActiveVacancyForPvzRequest) (*HasActiveVacancyForPvzResponse, error)
+	CheckResponseChatWritable(context.Context, *CheckResponseChatWritableRequest) (*CheckResponseChatWritableResponse, error)
 	mustEmbedUnimplementedMatchingServiceServer()
 }
 
@@ -253,6 +279,12 @@ func (UnimplementedMatchingServiceServer) CreateReviewReply(context.Context, *Cr
 }
 func (UnimplementedMatchingServiceServer) ListReviews(context.Context, *ListReviewsRequest) (*ListReviewsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListReviews not implemented")
+}
+func (UnimplementedMatchingServiceServer) HasActiveVacancyForPvz(context.Context, *HasActiveVacancyForPvzRequest) (*HasActiveVacancyForPvzResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HasActiveVacancyForPvz not implemented")
+}
+func (UnimplementedMatchingServiceServer) CheckResponseChatWritable(context.Context, *CheckResponseChatWritableRequest) (*CheckResponseChatWritableResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckResponseChatWritable not implemented")
 }
 func (UnimplementedMatchingServiceServer) mustEmbedUnimplementedMatchingServiceServer() {}
 
@@ -501,6 +533,42 @@ func _MatchingService_ListReviews_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MatchingService_HasActiveVacancyForPvz_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HasActiveVacancyForPvzRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchingServiceServer).HasActiveVacancyForPvz(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchingService_HasActiveVacancyForPvz_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchingServiceServer).HasActiveVacancyForPvz(ctx, req.(*HasActiveVacancyForPvzRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MatchingService_CheckResponseChatWritable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckResponseChatWritableRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchingServiceServer).CheckResponseChatWritable(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchingService_CheckResponseChatWritable_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchingServiceServer).CheckResponseChatWritable(ctx, req.(*CheckResponseChatWritableRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MatchingService_ServiceDesc is the grpc.ServiceDesc for MatchingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -559,6 +627,14 @@ var MatchingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListReviews",
 			Handler:    _MatchingService_ListReviews_Handler,
+		},
+		{
+			MethodName: "HasActiveVacancyForPvz",
+			Handler:    _MatchingService_HasActiveVacancyForPvz_Handler,
+		},
+		{
+			MethodName: "CheckResponseChatWritable",
+			Handler:    _MatchingService_CheckResponseChatWritable_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

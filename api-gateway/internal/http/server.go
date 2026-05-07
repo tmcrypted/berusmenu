@@ -4,17 +4,16 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gitlab.com/berusmenu/api-gateway/internal/config"
-	"gitlab.com/berusmenu/api-gateway/internal/http/docs"
-	authhandler "gitlab.com/berusmenu/api-gateway/internal/http/handlers/auth"
-	communicationhandler "gitlab.com/berusmenu/api-gateway/internal/http/handlers/communication"
-	inventoryhandler "gitlab.com/berusmenu/api-gateway/internal/http/handlers/inventory"
-	matchinghandler "gitlab.com/berusmenu/api-gateway/internal/http/handlers/matching"
-	"gitlab.com/berusmenu/api-gateway/internal/http/middleware"
-	authv1 "gitlab.com/berusmenu/proto/gen/go/auth/v1"
-	communicationv1 "gitlab.com/berusmenu/proto/gen/go/communication/v1"
-	inventoryv1 "gitlab.com/berusmenu/proto/gen/go/inventory/v1"
-	matchingv1 "gitlab.com/berusmenu/proto/gen/go/matching/v1"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/config"
+	authhandler "github.com/tmcrypted/berusmenu/api-gateway/internal/http/handlers/auth"
+	communicationhandler "github.com/tmcrypted/berusmenu/api-gateway/internal/http/handlers/communication"
+	inventoryhandler "github.com/tmcrypted/berusmenu/api-gateway/internal/http/handlers/inventory"
+	matchinghandler "github.com/tmcrypted/berusmenu/api-gateway/internal/http/handlers/matching"
+	"github.com/tmcrypted/berusmenu/api-gateway/internal/http/middleware"
+	authv1 "github.com/tmcrypted/berusmenu/proto/gen/go/auth/v1"
+	communicationv1 "github.com/tmcrypted/berusmenu/proto/gen/go/communication/v1"
+	inventoryv1 "github.com/tmcrypted/berusmenu/proto/gen/go/inventory/v1"
+	matchingv1 "github.com/tmcrypted/berusmenu/proto/gen/go/matching/v1"
 )
 
 type Dependencies struct {
@@ -32,6 +31,8 @@ func NewRouter(deps Dependencies) *gin.Engine {
 		middleware.RequestID(),
 		middleware.Logger(),
 		middleware.Recovery(),
+		middleware.SecurityHeaders(),
+		middleware.CORS(deps.Config),
 		middleware.Timeout(deps.Config.RequestTimeout),
 	)
 
@@ -43,32 +44,15 @@ func NewRouter(deps Dependencies) *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	router.GET("/openapi.json", func(c *gin.Context) {
-		spec, err := docs.OpenAPIJSON()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": gin.H{
-					"code":    "internal",
-					"message": "failed to build OpenAPI document",
-				},
-			})
-			return
-		}
-		c.Data(http.StatusOK, "application/json; charset=utf-8", spec)
-	})
-
-	router.GET("/swagger", func(c *gin.Context) {
-		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(docs.SwaggerUIHTML))
-	})
-
-	authMiddleware := middleware.Auth(deps.Auth)
+	authMiddleware := middleware.Auth(deps.Auth, deps.Config)
+	csrfMiddleware := middleware.CSRF(deps.Config)
 	verifiedMiddleware := middleware.RequireVerified()
 
 	api := router.Group("/v1")
-	authhandler.RegisterRoutes(api, deps.Auth, authMiddleware, verifiedMiddleware)
-	inventoryhandler.RegisterRoutes(api, deps.Inventory, authMiddleware, verifiedMiddleware)
-	matchinghandler.RegisterRoutes(api, deps.Matching, authMiddleware, verifiedMiddleware)
-	communicationhandler.RegisterRoutes(router, api, deps.Communication, authMiddleware, verifiedMiddleware)
+	authhandler.RegisterRoutes(api, deps.Config, deps.Auth, authMiddleware, csrfMiddleware, verifiedMiddleware)
+	inventoryhandler.RegisterRoutes(api, deps.Inventory, authMiddleware, csrfMiddleware, verifiedMiddleware)
+	matchinghandler.RegisterRoutes(api, deps.Matching, authMiddleware, csrfMiddleware, verifiedMiddleware)
+	communicationhandler.RegisterRoutes(router, api, deps.Communication, authMiddleware, csrfMiddleware, verifiedMiddleware)
 
 	return router
 }

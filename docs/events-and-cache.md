@@ -4,6 +4,8 @@
 
 Kafka is used only for notification events.
 
+`notification-service` commits Kafka offsets only after successful handling. Malformed protobuf or semantically invalid notification messages are logged and committed so they do not block a partition forever. Transient sender failures are retried with bounded backoff and are not committed after retries are exhausted.
+
 ### Event: `auth.email_verification_requested`
 
 Producer:
@@ -23,7 +25,9 @@ Payload:
 
 Side effect:
 
-- send verification email through Mailganer
+- send verification email through notification email sender
+- local development currently logs an email stub
+- Mailganer is planned as production provider
 
 ### Event: `matching.response_created`
 
@@ -42,11 +46,19 @@ Payload:
 - `owner_user_id`
 - `owner_email`
 - `worker_user_id`
+- `vacancy_title`
+- `shift_date`
+- `pay_amount`
 - `occurred_at`
 
 Side effect:
 
-- send owner email about new response
+- send owner email about new response through notification email sender
+
+Consumer behavior:
+
+- both MVP topics are consumed by `notification-service` in the same consumer group
+- local development uses the log/stub sender for both notification types
 
 ## Redis in MVP
 

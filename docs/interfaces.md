@@ -2,6 +2,13 @@
 
 ## Public REST via API Gateway
 
+Auth transport:
+
+- Web clients authenticate with `berusmenu_access` HttpOnly cookie.
+- Refresh uses `berusmenu_refresh` HttpOnly cookie.
+- Authenticated unsafe methods require `X-CSRF-Token` matching `berusmenu_csrf`.
+- Gateway forwards verified identity to gRPC services through metadata.
+
 ### Auth
 
 - `POST /v1/auth/register`
@@ -19,7 +26,6 @@
 - `GET /v1/pvz`
 - `GET /v1/pvz/{id}`
 - `PATCH /v1/pvz/{id}`
-- `POST /v1/pvz/{id}/submit-update`
 
 ### Moderation
 
@@ -74,29 +80,33 @@
 
 ### InventoryService
 
-- `CreatePVZ`
-- `GetPVZ`
-- `ListOwnerPVZ`
-- `PatchPVZ`
-- `SubmitPVZUpdate`
-- `ApprovePVZ`
-- `RejectPVZ`
-- `BlockPVZ`
-- `CheckPVZForVacancy`
+- `CreatePvz`
+- `GetPvz`
+- `ListOwnerPvz`
+- `UpdatePvz`
+- `CheckPvzForVacancy`
+- `ListPendingPvz`
+- `ApprovePvz`
+- `RejectPvz`
+- `BlockPvz`
 
 ### MatchingService
 
 - `CreateVacancy`
 - `ListVacancies`
+- `ListOwnerVacancies`
 - `GetVacancy`
 - `CreateResponse`
 - `WithdrawResponse`
+- `ListResponsesForVacancy`
 - `AcceptResponse`
 - `CancelAssignment`
 - `CompleteAssignment`
 - `CreateReview`
 - `CreateReviewReply`
 - `ListReviews`
+- `HasActiveVacancyForPvz`
+- `CheckResponseChatWritable`
 
 ### CommunicationService
 

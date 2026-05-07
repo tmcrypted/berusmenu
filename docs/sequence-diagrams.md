@@ -12,7 +12,7 @@ sequenceDiagram
     participant R as Redis
     participant K as Kafka
     participant NS as Notification Service
-    participant MP as Mailganer
+    participant ES as Email Sender
 
     U->>FE: Submit registration form
     FE->>GW: POST /v1/auth/register
@@ -25,9 +25,9 @@ sequenceDiagram
     AU->>R: SET email_verify:{user_id}=code TTL 10m
     AU->>K: Publish auth.email_verification_requested
     AU-->>GW: user + access_token + refresh_token
-    GW-->>FE: 201 Created
+    GW-->>FE: 201 Created + HttpOnly auth cookies + CSRF cookie
     K-->>NS: auth.email_verification_requested
-    NS->>MP: Send verification email
+    NS->>ES: Log/send verification email
 ```
 
 ## 2. Resend verification code
@@ -41,7 +41,7 @@ sequenceDiagram
     participant R as Redis
     participant K as Kafka
     participant NS as Notification Service
-    participant MP as Mailganer
+    participant ES as Email Sender
 
     U->>FE: Click resend code
     FE->>GW: POST /v1/auth/resend-code
@@ -53,7 +53,7 @@ sequenceDiagram
     AU-->>GW: accepted
     GW-->>FE: 202 Accepted
     K-->>NS: auth.email_verification_requested
-    NS->>MP: Send same active code
+    NS->>ES: Log/send same active code
 ```
 
 ## 3. Verify email
@@ -103,7 +103,7 @@ sequenceDiagram
     AU->>AU: Verify password
     AU->>PG: Create refresh session
     AU-->>GW: user + access_token + refresh_token
-    GW-->>FE: 200 OK
+    GW-->>FE: 200 OK + HttpOnly auth cookies + CSRF cookie
 ```
 
 ## 5. Create PVZ
@@ -118,7 +118,7 @@ sequenceDiagram
 
     Owner->>FE: Create PVZ
     FE->>GW: POST /v1/pvz
-    GW->>INV: CreatePVZ
+    GW->>INV: CreatePvz
     INV->>PG: Insert inventory.pvz with status pending
     INV->>PG: Insert moderation event submitted
     INV-->>GW: PVZ created
@@ -137,14 +137,14 @@ sequenceDiagram
 
     Mod->>FE: Approve or reject PVZ
     FE->>GW: POST /v1/moderation/pvz/{id}/decision
-    GW->>INV: ApprovePVZ or RejectPVZ
+    GW->>INV: ApprovePvz or RejectPvz
     INV->>PG: Update pvz status
     INV->>PG: Insert moderation event
     INV-->>GW: done
     GW-->>FE: 200 OK
 ```
 
-## 7. Submit PVZ update and move back to pending
+## 7. Update PVZ and move back to pending
 
 ```mermaid
 sequenceDiagram
@@ -152,14 +152,16 @@ sequenceDiagram
     participant FE as Frontend
     participant GW as API Gateway
     participant INV as Inventory Service
+    participant MATCH as Matching Service
     participant PG as PostgreSQL
 
-    Owner->>FE: Submit PVZ changes
-    FE->>GW: POST /v1/pvz/{id}/submit-update
-    GW->>INV: SubmitPVZUpdate
-    INV->>PG: Check active vacancy by PVZ
+    Owner->>FE: Update PVZ
+    FE->>GW: PATCH /v1/pvz/{id}
+    GW->>INV: UpdatePvz
+    INV->>MATCH: HasActiveVacancyForPvz(pvz_id)
+    MATCH-->>INV: active vacancy flag
     alt active vacancy exists
-        INV-->>GW: reject request
+        INV-->>GW: reject update
         GW-->>FE: 409 Conflict
     else no active vacancy
         INV->>PG: Update PVZ data and set status pending
@@ -182,9 +184,9 @@ sequenceDiagram
 
     Owner->>FE: Create vacancy
     FE->>GW: POST /v1/vacancies
-    GW->>INV: Check PVZ ownership and approved status
-    INV-->>GW: PVZ is approved
     GW->>MATCH: CreateVacancy
+    MATCH->>INV: CheckPvzForVacancy(pvz_id)
+    INV-->>MATCH: approved owner PVZ snapshot
     MATCH->>PG: Insert matching.vacancies
     MATCH-->>GW: vacancy created
     GW-->>FE: 201 Created
@@ -202,19 +204,19 @@ sequenceDiagram
     participant PG as PostgreSQL
     participant K as Kafka
     participant NS as Notification Service
-    participant MP as Mailganer
+    participant ES as Email Sender
 
     Worker->>FE: Respond to vacancy
     FE->>GW: POST /v1/vacancies/{id}/responses
     GW->>MATCH: CreateResponse
     MATCH->>PG: Insert matching.responses
-    GW->>COMM: CreateConversationForResponse
+    MATCH->>COMM: CreateConversationForResponse
     COMM->>PG: Insert communication.conversations
     MATCH->>K: Publish matching.response_created
     MATCH-->>GW: response created
     GW-->>FE: 201 Created
     K-->>NS: matching.response_created
-    NS->>MP: Send owner email notification
+    NS->>ES: Log/send owner email notification
 ```
 
 ## 10. Send message
@@ -225,11 +227,14 @@ sequenceDiagram
     participant FE as Frontend
     participant GW as API Gateway
     participant COMM as Communication Service
+    participant MATCH as Matching Service
     participant PG as PostgreSQL
 
     User->>FE: Send message
     FE->>GW: WS/HTTP message send
     GW->>COMM: SendMessage
+    COMM->>MATCH: CheckResponseChatWritable(response_id)
+    MATCH-->>COMM: writable flag
     COMM->>PG: Insert communication.messages
     COMM->>PG: Update conversations.last_message_at
     COMM-->>GW: message stored

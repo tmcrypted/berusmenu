@@ -1,13 +1,15 @@
 import { create } from "zustand";
 
 type AuthState = {
-  token: string | null;
-  setToken: (token: string | null) => void;
+  user: unknown | null;
+  authStatus: "anonymous" | "authenticated";
+  setUser: (user: unknown | null) => void;
   clearAuth: () => void;
 };
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: null,
-  setToken: (token) => set({ token }),
-  clearAuth: () => set({ token: null }),
+  user: null,
+  authStatus: "anonymous",
+  setUser: (user) => set({ user, authStatus: user ? "authenticated" : "anonymous" }),
+  clearAuth: () => set({ user: null, authStatus: "anonymous" }),
 }));
