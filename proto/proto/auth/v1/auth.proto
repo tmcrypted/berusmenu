@@ -110,6 +110,16 @@ message VerifyEmailResponse {
   User user = 1;
 }
 
+message BlockUserRequest {
+  int64 user_id = 1;
+  optional string reason = 2;
+  google.protobuf.Timestamp blocked_until = 3;
+}
+
+message BlockUserResponse {
+  User user = 1;
+}
+
 service AuthService {
   rpc Register(RegisterRequest) returns (RegisterResponse);
   rpc Login(LoginRequest) returns (LoginResponse);
@@ -120,4 +130,5 @@ service AuthService {
   rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
   rpc ResendVerificationCode(ResendVerificationCodeRequest) returns (ResendVerificationCodeResponse);
   rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
+  rpc BlockUser(BlockUserRequest) returns (BlockUserResponse);
 }

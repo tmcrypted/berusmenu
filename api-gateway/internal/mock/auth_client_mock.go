@@ -42,6 +42,26 @@ func (m *MockAuthServiceClient) EXPECT() *MockAuthServiceClientMockRecorder {
 	return m.recorder
 }
 
+// BlockUser mocks base method.
+func (m *MockAuthServiceClient) BlockUser(ctx context.Context, in *authv1.BlockUserRequest, opts ...grpc.CallOption) (*authv1.BlockUserResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "BlockUser", varargs...)
+	ret0, _ := ret[0].(*authv1.BlockUserResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BlockUser indicates an expected call of BlockUser.
+func (mr *MockAuthServiceClientMockRecorder) BlockUser(ctx, in any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockUser", reflect.TypeOf((*MockAuthServiceClient)(nil).BlockUser), varargs...)
+}
+
 // GetUser mocks base method.
 func (m *MockAuthServiceClient) GetUser(ctx context.Context, in *authv1.GetUserRequest, opts ...grpc.CallOption) (*authv1.GetUserResponse, error) {
 	m.ctrl.T.Helper()

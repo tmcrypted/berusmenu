@@ -476,6 +476,39 @@ Success `200`: PVZ object.
 
 Possible errors: `400`, `401`, `403`, `404`.
 
+### `POST /v1/moderation/users/{id}/block-and-delete-pvz`
+
+Temporarily blocks an owner account, deletes that owner's pending PVZ requests, and moves the owner's remaining PVZ to `blocked`.
+
+Auth: moderator.
+
+The gateway orchestrates two owning services: `auth-service.BlockUser` sets `blocked_until`, then `inventory-service.DeleteOwnerPvzRequests` cleans only `inventory.*` rows. If the second step fails after the user was blocked, the operation can be retried with the same user id.
+
+Request:
+
+```json
+{
+  "reason": "Spam PVZ submissions",
+  "block_duration_minutes": 1440,
+  "comment": "Bulk spam cleanup"
+}
+```
+
+`reason` and `block_duration_minutes` are required; `comment` is optional.
+
+Success `200`:
+
+```json
+{
+  "blocked_user_id": "42",
+  "blocked_until": "2026-05-10T12:00:00Z",
+  "deleted_count": "3",
+  "blocked_count": "2"
+}
+```
+
+Possible errors: `400`, `401`, `403`, `404`, `412`, `500`.
+
 ## Placeholder Endpoints
 
 These routes are registered in the gateway but currently return:

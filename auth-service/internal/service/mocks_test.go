@@ -144,6 +144,19 @@ func (mr *MockUserRepositoryMockRecorder) UpdateProfile(ctx, userID, fullName, p
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProfile", reflect.TypeOf((*MockUserRepository)(nil).UpdateProfile), ctx, userID, fullName, phone, avatarURL)
 }
 
+func (m *MockUserRepository) BlockUser(ctx context.Context, userID int64, blockedUntil time.Time) (store.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BlockUser", ctx, userID, blockedUntil)
+	ret0, _ := ret[0].(store.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockUserRepositoryMockRecorder) BlockUser(ctx, userID, blockedUntil any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlockUser", reflect.TypeOf((*MockUserRepository)(nil).BlockUser), ctx, userID, blockedUntil)
+}
+
 type MockVerificationStore struct {
 	ctrl     *gomock.Controller
 	recorder *MockVerificationStoreMockRecorder

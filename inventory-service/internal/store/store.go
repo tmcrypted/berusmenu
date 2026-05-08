@@ -211,6 +211,67 @@ func (s *Store) ModeratePvzWithEvent(ctx context.Context, id int64, status commo
 	return updated, nil
 }
 
+func (s *Store) DeletePendingAndBlockOwnerPvz(ctx context.Context, ownerID int64, actorUserID int64, comment *string) (int64, int64, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer tx.Rollback(ctx)
+
+	deleteSQL, deleteArgs, err := psql.Delete("inventory.pvz").
+		Where(sq.Eq{"owner_id": ownerID}).
+		Where(sq.Eq{"status": statusToDB(commonv1.PvzStatus_PVZ_STATUS_PENDING)}).
+		ToSql()
+	if err != nil {
+		return 0, 0, err
+	}
+	deleteTag, err := tx.Exec(ctx, deleteSQL, deleteArgs...)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	updateSQL, updateArgs, err := psql.Update("inventory.pvz").
+		Set("status", statusToDB(commonv1.PvzStatus_PVZ_STATUS_BLOCKED)).
+		Set("rejection_reason", nil).
+		Set("moderated_by", actorUserID).
+		Set("moderated_at", sq.Expr("NOW()")).
+		Set("updated_at", sq.Expr("NOW()")).
+		Where(sq.Eq{"owner_id": ownerID}).
+		Where(sq.NotEq{"status": []string{
+			statusToDB(commonv1.PvzStatus_PVZ_STATUS_PENDING),
+			statusToDB(commonv1.PvzStatus_PVZ_STATUS_BLOCKED),
+		}}).
+		Suffix("RETURNING id").
+		ToSql()
+	if err != nil {
+		return 0, 0, err
+	}
+	rows, err := tx.Query(ctx, updateSQL, updateArgs...)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer rows.Close()
+
+	blocked := int64(0)
+	for rows.Next() {
+		var pvzID int64
+		if err := rows.Scan(&pvzID); err != nil {
+			return 0, 0, err
+		}
+		if err := insertModerationEvent(ctx, tx, pvzID, commonv1.PvzModerationAction_PVZ_MODERATION_ACTION_BLOCKED, actorUserID, comment); err != nil {
+			return 0, 0, err
+		}
+		blocked++
+	}
+	if err := rows.Err(); err != nil {
+		return 0, 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return 0, 0, err
+	}
+	return deleteTag.RowsAffected(), blocked, nil
+}
+
 func (s *Store) listPvz(ctx context.Context, sql string, args ...any) ([]Pvz, error) {
 	rows, err := s.pool.Query(ctx, sql, args...)
 	if err != nil {

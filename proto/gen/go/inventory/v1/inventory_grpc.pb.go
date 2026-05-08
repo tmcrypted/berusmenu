@@ -19,15 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion8
 
 const (
-	InventoryService_CreatePvz_FullMethodName          = "/berusmenu.inventory.v1.InventoryService/CreatePvz"
-	InventoryService_GetPvz_FullMethodName             = "/berusmenu.inventory.v1.InventoryService/GetPvz"
-	InventoryService_ListOwnerPvz_FullMethodName       = "/berusmenu.inventory.v1.InventoryService/ListOwnerPvz"
-	InventoryService_UpdatePvz_FullMethodName          = "/berusmenu.inventory.v1.InventoryService/UpdatePvz"
-	InventoryService_CheckPvzForVacancy_FullMethodName = "/berusmenu.inventory.v1.InventoryService/CheckPvzForVacancy"
-	InventoryService_ListPendingPvz_FullMethodName     = "/berusmenu.inventory.v1.InventoryService/ListPendingPvz"
-	InventoryService_ApprovePvz_FullMethodName         = "/berusmenu.inventory.v1.InventoryService/ApprovePvz"
-	InventoryService_RejectPvz_FullMethodName          = "/berusmenu.inventory.v1.InventoryService/RejectPvz"
-	InventoryService_BlockPvz_FullMethodName           = "/berusmenu.inventory.v1.InventoryService/BlockPvz"
+	InventoryService_CreatePvz_FullMethodName              = "/berusmenu.inventory.v1.InventoryService/CreatePvz"
+	InventoryService_GetPvz_FullMethodName                 = "/berusmenu.inventory.v1.InventoryService/GetPvz"
+	InventoryService_ListOwnerPvz_FullMethodName           = "/berusmenu.inventory.v1.InventoryService/ListOwnerPvz"
+	InventoryService_UpdatePvz_FullMethodName              = "/berusmenu.inventory.v1.InventoryService/UpdatePvz"
+	InventoryService_CheckPvzForVacancy_FullMethodName     = "/berusmenu.inventory.v1.InventoryService/CheckPvzForVacancy"
+	InventoryService_ListPendingPvz_FullMethodName         = "/berusmenu.inventory.v1.InventoryService/ListPendingPvz"
+	InventoryService_ApprovePvz_FullMethodName             = "/berusmenu.inventory.v1.InventoryService/ApprovePvz"
+	InventoryService_RejectPvz_FullMethodName              = "/berusmenu.inventory.v1.InventoryService/RejectPvz"
+	InventoryService_BlockPvz_FullMethodName               = "/berusmenu.inventory.v1.InventoryService/BlockPvz"
+	InventoryService_DeleteOwnerPvzRequests_FullMethodName = "/berusmenu.inventory.v1.InventoryService/DeleteOwnerPvzRequests"
 )
 
 // InventoryServiceClient is the client API for InventoryService service.
@@ -43,6 +44,7 @@ type InventoryServiceClient interface {
 	ApprovePvz(ctx context.Context, in *ApprovePvzRequest, opts ...grpc.CallOption) (*ApprovePvzResponse, error)
 	RejectPvz(ctx context.Context, in *RejectPvzRequest, opts ...grpc.CallOption) (*RejectPvzResponse, error)
 	BlockPvz(ctx context.Context, in *BlockPvzRequest, opts ...grpc.CallOption) (*BlockPvzResponse, error)
+	DeleteOwnerPvzRequests(ctx context.Context, in *DeleteOwnerPvzRequestsRequest, opts ...grpc.CallOption) (*DeleteOwnerPvzRequestsResponse, error)
 }
 
 type inventoryServiceClient struct {
@@ -143,6 +145,16 @@ func (c *inventoryServiceClient) BlockPvz(ctx context.Context, in *BlockPvzReque
 	return out, nil
 }
 
+func (c *inventoryServiceClient) DeleteOwnerPvzRequests(ctx context.Context, in *DeleteOwnerPvzRequestsRequest, opts ...grpc.CallOption) (*DeleteOwnerPvzRequestsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteOwnerPvzRequestsResponse)
+	err := c.cc.Invoke(ctx, InventoryService_DeleteOwnerPvzRequests_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // InventoryServiceServer is the server API for InventoryService service.
 // All implementations must embed UnimplementedInventoryServiceServer
 // for forward compatibility
@@ -156,6 +168,7 @@ type InventoryServiceServer interface {
 	ApprovePvz(context.Context, *ApprovePvzRequest) (*ApprovePvzResponse, error)
 	RejectPvz(context.Context, *RejectPvzRequest) (*RejectPvzResponse, error)
 	BlockPvz(context.Context, *BlockPvzRequest) (*BlockPvzResponse, error)
+	DeleteOwnerPvzRequests(context.Context, *DeleteOwnerPvzRequestsRequest) (*DeleteOwnerPvzRequestsResponse, error)
 	mustEmbedUnimplementedInventoryServiceServer()
 }
 
@@ -189,6 +202,9 @@ func (UnimplementedInventoryServiceServer) RejectPvz(context.Context, *RejectPvz
 }
 func (UnimplementedInventoryServiceServer) BlockPvz(context.Context, *BlockPvzRequest) (*BlockPvzResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BlockPvz not implemented")
+}
+func (UnimplementedInventoryServiceServer) DeleteOwnerPvzRequests(context.Context, *DeleteOwnerPvzRequestsRequest) (*DeleteOwnerPvzRequestsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteOwnerPvzRequests not implemented")
 }
 func (UnimplementedInventoryServiceServer) mustEmbedUnimplementedInventoryServiceServer() {}
 
@@ -365,6 +381,24 @@ func _InventoryService_BlockPvz_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _InventoryService_DeleteOwnerPvzRequests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteOwnerPvzRequestsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InventoryServiceServer).DeleteOwnerPvzRequests(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InventoryService_DeleteOwnerPvzRequests_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InventoryServiceServer).DeleteOwnerPvzRequests(ctx, req.(*DeleteOwnerPvzRequestsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // InventoryService_ServiceDesc is the grpc.ServiceDesc for InventoryService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -407,6 +441,10 @@ var InventoryService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BlockPvz",
 			Handler:    _InventoryService_BlockPvz_Handler,
+		},
+		{
+			MethodName: "DeleteOwnerPvzRequests",
+			Handler:    _InventoryService_DeleteOwnerPvzRequests_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

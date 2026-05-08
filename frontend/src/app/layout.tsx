@@ -1,16 +1,11 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { AuthBootstrap } from "@/components/auth/AuthBootstrap";
 import { AuthStoreHydrator } from "@/components/auth/AuthStoreHydrator";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { getServerAuthSnapshot } from "@/lib/server-auth";
 import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin", "cyrillic"],
-});
 
 export const metadata: Metadata = {
   title: "Беру Смену.ру — срочные смены для ПВЗ",
@@ -27,9 +22,10 @@ export default async function RootLayout({
 
   return (
     <html lang="ru" suppressHydrationWarning>
-      <body className={`${inter.variable} flex min-h-screen flex-col font-sans antialiased`}>
+      <body className="flex min-h-screen flex-col font-sans antialiased">
         <ThemeProvider>
           <AuthStoreHydrator snapshot={authSnapshot}>
+            <AuthBootstrap />
             <Header />
             <main className="min-h-0 w-full flex-1 pt-[var(--header-height)]">
               {children}

@@ -11,6 +11,7 @@
 - current user profile
 - email verification
 - resend verification code
+- temporary moderator block for spam users via `blocked_until`
 
 ## Owned schema
 
@@ -31,6 +32,7 @@ Tables:
 - verification code logic lives here
 - Redis keys for verification are owned logically by this service
 - avatars are stored on server files for now, DB stores `avatar_url`
+- moderator block stores `auth.users.blocked_until`; expired blocks no longer deny login/JWT validation
 
 ## Integrations
 

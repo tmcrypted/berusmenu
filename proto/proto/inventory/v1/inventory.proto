@@ -137,6 +137,16 @@ message BlockPvzResponse {
   Pvz pvz = 1;
 }
 
+message DeleteOwnerPvzRequestsRequest {
+  int64 owner_id = 1;
+  optional string comment = 2;
+}
+
+message DeleteOwnerPvzRequestsResponse {
+  int64 deleted_count = 1;
+  int64 blocked_count = 2;
+}
+
 service InventoryService {
   rpc CreatePvz(CreatePvzRequest) returns (CreatePvzResponse);
   rpc GetPvz(GetPvzRequest) returns (GetPvzResponse);
@@ -147,4 +157,5 @@ service InventoryService {
   rpc ApprovePvz(ApprovePvzRequest) returns (ApprovePvzResponse);
   rpc RejectPvz(RejectPvzRequest) returns (RejectPvzResponse);
   rpc BlockPvz(BlockPvzRequest) returns (BlockPvzResponse);
+  rpc DeleteOwnerPvzRequests(DeleteOwnerPvzRequestsRequest) returns (DeleteOwnerPvzRequestsResponse);
 }

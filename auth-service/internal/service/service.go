@@ -29,6 +29,7 @@ type UserRepository interface {
 	RevokeRefreshSession(ctx context.Context, refreshToken string) error
 	MarkEmailVerified(ctx context.Context, userID int64) (store.User, error)
 	UpdateProfile(ctx context.Context, userID int64, fullName *string, phone *string, avatarURL *string) (store.User, error)
+	BlockUser(ctx context.Context, userID int64, blockedUntil time.Time) (store.User, error)
 }
 
 type VerificationStore interface {
@@ -119,7 +120,7 @@ func (s *Service) Login(ctx context.Context, input dto.LoginInput) (dto.AuthPayl
 	if err != nil {
 		return dto.AuthPayload{}, serviceError(ErrUnauthenticated, "invalid email or password")
 	}
-	if user.Status != "active" {
+	if currentlyBlocked(user) {
 		return dto.AuthPayload{}, serviceError(ErrPermissionDenied, "user is blocked")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password)); err != nil {
@@ -149,7 +150,7 @@ func (s *Service) Refresh(ctx context.Context, input dto.RefreshInput) (dto.Auth
 		}
 		return dto.AuthPayload{}, serviceError(ErrInternal, "failed to rotate refresh session")
 	}
-	if user.Status != "active" {
+	if currentlyBlocked(user) {
 		return dto.AuthPayload{}, serviceError(ErrPermissionDenied, "user is blocked")
 	}
 
@@ -173,7 +174,7 @@ func (s *Service) ValidateToken(ctx context.Context, input dto.ValidateTokenInpu
 		return dto.ValidateTokenOutput{Valid: false}, nil
 	}
 	user, err := s.users.GetUserByID(ctx, userID)
-	if err != nil || user.Status != "active" {
+	if err != nil || currentlyBlocked(user) {
 		return dto.ValidateTokenOutput{Valid: false}, nil
 	}
 
@@ -193,6 +194,38 @@ func (s *Service) GetUser(ctx context.Context, input dto.GetUserInput) (store.Us
 	user, err := s.users.GetUserByID(ctx, input.UserID)
 	if err != nil {
 		return store.User{}, notFoundOrInternal(err, "user not found", "failed to get user")
+	}
+	return user, nil
+}
+
+func (s *Service) BlockUser(ctx context.Context, input dto.BlockUserInput) (store.User, error) {
+	if input.ActorUserID <= 0 {
+		return store.User{}, serviceError(ErrUnauthenticated, "missing authenticated user")
+	}
+	if input.ActorRole != commonv1.UserRole_USER_ROLE_MODERATOR {
+		return store.User{}, serviceError(ErrPermissionDenied, "insufficient role")
+	}
+	if input.UserID <= 0 {
+		return store.User{}, serviceError(ErrInvalidArgument, "user_id is required")
+	}
+	if input.UserID == input.ActorUserID {
+		return store.User{}, serviceError(ErrFailedPrecondition, "cannot block yourself")
+	}
+	if !input.BlockedUntil.After(time.Now()) {
+		return store.User{}, serviceError(ErrInvalidArgument, "blocked_until must be in the future")
+	}
+
+	current, err := s.users.GetUserByID(ctx, input.UserID)
+	if err != nil {
+		return store.User{}, notFoundOrInternal(err, "user not found", "failed to get user")
+	}
+	if current.Role == commonv1.UserRole_USER_ROLE_MODERATOR {
+		return store.User{}, serviceError(ErrFailedPrecondition, "cannot block moderator")
+	}
+
+	user, err := s.users.BlockUser(ctx, input.UserID, input.BlockedUntil)
+	if err != nil {
+		return store.User{}, notFoundOrInternal(err, "user not found", "failed to block user")
 	}
 	return user, nil
 }
@@ -321,4 +354,14 @@ func roleString(role commonv1.UserRole) string {
 	default:
 		return "worker"
 	}
+}
+
+func currentlyBlocked(user store.User) bool {
+	if user.Status != "blocked" {
+		return false
+	}
+	if user.BlockedUntil == nil {
+		return true
+	}
+	return user.BlockedUntil.After(time.Now())
 }

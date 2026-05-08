@@ -1,12 +1,18 @@
 import type { AuthStatus, User, UserRole } from "@/types/auth";
 
 export function isProfileComplete(user: User) {
+  if (user.role === "moderator") {
+    return true;
+  }
   const name = user.full_name?.trim() ?? "";
   const phone = user.phone?.trim() ?? "";
   return Boolean(name && phone);
 }
 
 export function profileCompletionPath(role: UserRole) {
+  if (role === "moderator") {
+    return "/moderation/pvz";
+  }
   if (role === "owner") {
     return "/complete-profile/owner";
   }

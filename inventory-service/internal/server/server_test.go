@@ -98,6 +98,10 @@ func (f *serverFakeRepo) ModeratePvzWithEvent(ctx context.Context, id int64, pvz
 	return store.Pvz{ID: id, OwnerID: 7, Status: pvzStatus, CreatedAt: now, UpdatedAt: now}, nil
 }
 
+func (f *serverFakeRepo) DeletePendingAndBlockOwnerPvz(ctx context.Context, ownerID int64, actorUserID int64, comment *string) (int64, int64, error) {
+	return 1, 2, f.err
+}
+
 type serverFakeChecker struct{}
 
 func (serverFakeChecker) HasActiveVacancyForPvz(ctx context.Context, pvzID int64) (bool, error) {

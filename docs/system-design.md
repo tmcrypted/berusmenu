@@ -85,6 +85,7 @@
 - PVZ updates directly mutate `inventory.pvz`, set PVZ back to `pending`, and require repeated moderation
 - PVZ update is forbidden when there are active vacancy with statuses `published` and `assigned`
 - new vacancy cannot be created while PVZ is not `approved`
+- moderator spam cleanup blocks the owner until `auth.users.blocked_until`, deletes pending owner PVZ requests, and sets remaining owner PVZ to `blocked`
 - Gateway stays thin; cross-domain business checks are synchronous RPCs owned by domain services
 
 ## Auth Rules
