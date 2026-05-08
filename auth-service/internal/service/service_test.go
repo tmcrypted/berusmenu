@@ -67,7 +67,6 @@ func TestRegister(t *testing.T) {
 			input: dto.RegisterInput{
 				Email:    "",
 				Password: "short",
-				FullName: "",
 			},
 			setup: func(users *MockUserRepository, verificationStore *MockVerificationStore, publisher *MockEventPublisher) {
 			},

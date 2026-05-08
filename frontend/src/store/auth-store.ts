@@ -1,15 +1,46 @@
 import { create } from "zustand";
+import {
+  createAnonymousAuthSnapshot,
+  createLoadingAuthSnapshot,
+  resolveUserAuthSnapshot,
+  type AuthSnapshot,
+} from "@/lib/auth-state";
+import type { User } from "@/types/auth";
 
 type AuthState = {
-  user: unknown | null;
-  authStatus: "anonymous" | "authenticated";
-  setUser: (user: unknown | null) => void;
+  user: AuthSnapshot["user"];
+  status: AuthSnapshot["status"];
+  initialized: AuthSnapshot["initialized"];
+  accessExpiresAt: AuthSnapshot["accessExpiresAt"];
+  setLoading: () => void;
+  setAnonymous: () => void;
+  setUnverified: (user: User, accessExpiresAt?: string | null) => void;
+  setIncomplete: (user: User) => void;
+  setReady: (user: User) => void;
+  hydrate: (snapshot: AuthSnapshot) => void;
   clearAuth: () => void;
 };
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  authStatus: "anonymous",
-  setUser: (user) => set({ user, authStatus: user ? "authenticated" : "anonymous" }),
-  clearAuth: () => set({ user: null, authStatus: "anonymous" }),
+  ...createLoadingAuthSnapshot(),
+  setLoading: () => set(createLoadingAuthSnapshot()),
+  setAnonymous: () => set(createAnonymousAuthSnapshot()),
+  setUnverified: (user, accessExpiresAt) =>
+    set(resolveUserAuthSnapshot(user, accessExpiresAt)),
+  setIncomplete: (user) =>
+    set({
+      user,
+      status: "authenticated_profile_incomplete",
+      initialized: true,
+      accessExpiresAt: null,
+    }),
+  setReady: (user) =>
+    set({
+      user,
+      status: "authenticated_ready",
+      initialized: true,
+      accessExpiresAt: null,
+    }),
+  hydrate: (snapshot) => set(snapshot),
+  clearAuth: () => set(createAnonymousAuthSnapshot()),
 }));

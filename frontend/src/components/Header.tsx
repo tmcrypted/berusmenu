@@ -1,30 +1,54 @@
+"use client";
+
 import Link from "next/link";
+import { useResolvedAuthSnapshot } from "@/components/auth/AuthStoreHydrator";
+import { AccountMenu } from "./AccountMenu";
+
+const headerChrome =
+  "inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl sm:min-h-11";
+const authSlot = "w-[12.5rem] sm:w-[15.5rem]";
 
 export function Header() {
+  const { status, user } = useResolvedAuthSnapshot();
+
+  const isBootstrapping = status === "loading";
+  const isAuthenticated = status !== "anonymous" && !isBootstrapping;
+
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <Link href="/" className="group flex items-baseline gap-2">
-          <span className="text-lg font-semibold tracking-tight text-[var(--accent)] transition group-hover:text-[var(--accent-hover)]">
-            Беру Смену
-          </span>
-          <span className="hidden text-xs text-[var(--muted)] sm:inline">
-            berusmenu.ru
+    <header className="fixed inset-x-0 top-0 z-50 flex h-[calc(var(--header-height)+0.5rem)] items-center border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_88%,transparent)] backdrop-blur-xl">
+      <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
+        <Link href="/" className="group min-w-0 shrink">
+          <span className="inline-flex items-baseline text-sm font-semibold tracking-tight text-[var(--foreground)] transition group-hover:text-[var(--accent)] sm:text-base">
+            <span className="truncate">Беру Смену</span>
+            <span className="font-medium text-[var(--muted)]">.ру</span>
           </span>
         </Link>
-        <nav className="flex items-center gap-2 sm:gap-3">
-          <Link
-            href="/login"
-            className="rounded-lg px-3 py-2 text-sm font-medium text-[var(--foreground)] transition hover:bg-[var(--muted-bg)]"
-          >
-            Войти
-          </Link>
-          <Link
-            href="/register"
-            className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-medium text-white transition hover:bg-[var(--accent-hover)]"
-          >
-            Регистрация
-          </Link>
+        <nav className="flex shrink-0 items-center" aria-label="Управление аккаунтом">
+          <div className={authSlot}>
+            {isAuthenticated && user ? (
+              <AccountMenu user={user} status={status} />
+            ) : isBootstrapping ? (
+              <div
+                className="h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)]/80 sm:h-11"
+                aria-hidden="true"
+              />
+            ) : (
+              <div className="flex w-full items-center justify-end gap-2 sm:gap-3">
+                <Link
+                  href="/login"
+                  className={`${headerChrome} whitespace-nowrap px-2 text-xs font-medium text-[var(--foreground)] transition hover:bg-[var(--muted-bg)] sm:px-3.5 sm:text-sm`}
+                >
+                  Войти
+                </Link>
+                <Link
+                  href="/register"
+                  className={`${headerChrome} whitespace-nowrap bg-[var(--accent)] px-3 text-xs font-semibold text-white shadow-[var(--shadow-soft)] transition hover:bg-[var(--accent-hover)] sm:px-4 sm:text-sm`}
+                >
+                  Регистрация
+                </Link>
+              </div>
+            )}
+          </div>
         </nav>
       </div>
     </header>

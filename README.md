@@ -131,6 +131,14 @@ Redis используется для:
 - [Runtime Topology](docs/runtime-topology.md)
 - [Development Plan](docs/development-plan.md)
 
+## Frontend MVP update
+
+- frontend auth now follows `register -> verify email -> complete profile`
+- registration can start with only `email + password + role`
+- profile completion is done after verification through `PATCH /v1/me`
+- first-paint frontend auth state is bootstrapped server-side through read-only `GET /v1/auth/session`, not through refresh-token rotation
+- the current frontend slice is built as a responsive web UI for phone, tablet, and desktop, with manual light/dark theme switching
+
 ## Что дальше
 
 Следующие инженерные шаги:

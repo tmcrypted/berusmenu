@@ -61,8 +61,8 @@ func TestRegisterSuccess(t *testing.T) {
 			if req.GetRole() != commonv1.UserRole_USER_ROLE_OWNER {
 				t.Errorf("role = %s, want owner", req.GetRole())
 			}
-			if req.GetFullName() != "Owner User" {
-				t.Errorf("full_name = %q, want Owner User", req.GetFullName())
+			if req.GetFullName() != "" {
+				t.Errorf("full_name = %q, want empty", req.GetFullName())
 			}
 			return &authv1.RegisterResponse{Auth: sampleAuthPayload(false)}, nil
 		},
@@ -73,7 +73,6 @@ func TestRegisterSuccess(t *testing.T) {
 	rec := doJSON(router, http.MethodPost, "/v1/auth/register", `{
 		"email":"owner@example.com",
 		"password":"password123",
-		"full_name":"Owner User",
 		"role":"owner"
 	}`, "")
 
@@ -96,8 +95,7 @@ func TestRegisterValidationFailure(t *testing.T) {
 
 	rec := doJSON(router, http.MethodPost, "/v1/auth/register", `{
 		"email":"bad",
-		"password":"short",
-		"full_name":"User"
+		"password":"short"
 	}`, "")
 
 	if rec.Code != http.StatusBadRequest {
@@ -306,6 +304,36 @@ func TestGetMeRejectsUnverifiedUser(t *testing.T) {
 
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusForbidden, rec.Body.String())
+	}
+}
+
+func TestGetSessionAllowsUnverifiedUser(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	client := mock.NewMockAuthServiceClient(ctrl)
+
+	client.EXPECT().ValidateToken(gomock.Any(), gomock.Any()).Return(&authv1.ValidateTokenResponse{
+		Valid:         true,
+		UserId:        7,
+		Role:          commonv1.UserRole_USER_ROLE_WORKER,
+		Email:         "worker@example.com",
+		EmailVerified: false,
+	}, nil)
+
+	client.EXPECT().GetUser(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, req *authv1.GetUserRequest, opts ...grpc.CallOption) (*authv1.GetUserResponse, error) {
+			if req.GetUserId() != 7 {
+				t.Errorf("user_id = %d, want 7", req.GetUserId())
+			}
+			return &authv1.GetUserResponse{User: sampleUser(false)}, nil
+		},
+	)
+
+	router := newTestRouter(client)
+
+	rec := doJSON(router, http.MethodGet, "/v1/auth/session", "", "access")
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
 	}
 }
 

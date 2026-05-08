@@ -128,7 +128,7 @@
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"email\": \"worker@example.com\",\n  \"password\": \"password123\",\n  \"full_name\": \"Worker User\",\n  \"role\": \"worker\",\n  \"phone\": \"+79990001122\"\n}"
+        "text": "{\n  \"email\": \"worker@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"worker\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -271,6 +271,29 @@
       ],
       "authentication": {},
       "metaSortKey": 500,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_auth_session",
+      "parentId": "fld_auth",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/auth/session",
+      "name": "Session",
+      "description": "Read-only current auth session from the access cookie. Does not rotate refresh cookies.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 550,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,

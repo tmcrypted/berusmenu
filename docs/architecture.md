@@ -33,6 +33,8 @@ flowchart LR
 
 - Frontend ходит только в `api-gateway`.
 - Browser auth state is transported through HttpOnly cookies managed by `api-gateway`; frontend JavaScript does not store access or refresh tokens.
+- Frontend first-paint auth bootstrap happens on the Next.js server: request cookies are forwarded to read-only `GET /v1/auth/session`, then the resulting auth snapshot is used to hydrate client state before render.
+- Frontend registration is intentionally minimal (`email + password + role`); profile details are completed after email verification.
 - Gateway enforces CSRF for authenticated unsafe HTTP methods and forwards verified identity downstream through gRPC metadata, not cookies.
 - Gateway общается с backend services по gRPC.
 - Gateway остается тонким; cross-domain business checks выполняются синхронно в owning services.

@@ -1,33 +1,45 @@
 # frontend
 
-Frontend workspace for Berusmenu MVP inside the monorepo.
+Frontend workspace for the Berusmenu MVP.
 
-## Ответственность
+## Responsibility
 
+- public vacancy-style home with mocked shifts
 - registration / login / email verification UI
-- owner PVZ cabinet
-- vacancy creation and management
-- worker vacancy feed
-- response chat
-- reviews and review replies
+- post-verify profile completion for `worker` and `owner`
+- owner and worker entry points for later domain flows
+- responsive web UI for mobile, tablet, and desktop
 
-## Key UX rules
+## Current stack
 
-- auth tokens are never stored in Zustand/localStorage; browser auth uses HttpOnly cookies from `api-gateway`
+- `Next.js 15`
+- `React 19`
+- `Tailwind CSS 4`
+- `TypeScript`
+- `Zustand`
+- `next-themes`
+- `react-hook-form`
+- `zod`
+
+## Frontend auth rules
+
+- browser auth uses HttpOnly cookies from `api-gateway`
+- auth tokens are never stored in Zustand or localStorage
 - unsafe API calls send `X-CSRF-Token` from the readable `berusmenu_csrf` cookie
-- unverified user is redirected to verification screen
-- verification screen has:
-  - logout
-  - resend code
-  - verify code input
-- withdraw response must have strong confirmation UI
-- replies under review are collapsed by default with "show replies"
+- first paint auth bootstrap happens on the Next.js server via request cookies and read-only `GET /v1/auth/session`
+- Zustand is hydrated from that server snapshot before client components render
+- client auth requests reuse the same snapshot resolver to avoid duplicated state logic
 
-## Next implementation steps
+## UX rules
 
-1. auth and verification screens
-2. owner PVZ flow
-3. owner vacancy flow
-4. worker response flow
-5. chat UI
-6. reviews UI
+- registration is minimal: `email + password + role`
+- unverified user is redirected to `/verify-email`
+- verified but incomplete user is redirected to a role-specific completion screen
+- worker cannot proceed to responses until profile completion
+- owner completes profile first and then proceeds to the future PVZ flow
+- both light and dark themes are first-class and switched manually
+- new UI must remain usable across phones, tablets, and desktop screens
+- public home can use mocked vacancies until matching endpoints are ready
+- verification screen must keep logout, resend code, and verify code input
+- withdraw response must keep strong confirmation UI when response flows are added
+- replies under review stay collapsed by default with a "show replies" affordance

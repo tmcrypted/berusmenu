@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { RegisterForm } from "@/components/auth/RegisterForm";
+import { RegisterRoleChoice } from "@/components/auth/RegisterRoleChoice";
 
 export const metadata: Metadata = {
-  title: "Регистрация | Беру Смену",
-  description: "Создание аккаунта на Беру Смену",
+  title: "Регистрация | Беру Смену . ру",
+  description: "Выберите роль и создайте аккаунт в Berusmenu",
 };
 
 export default function RegisterPage() {
-  return <RegisterForm />;
+  return <RegisterRoleChoice />;
 }

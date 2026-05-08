@@ -1,79 +1,115 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { login } from "@/lib/auth";
+import { ApiError } from "@/lib/api";
+import { resolveApiAuthSnapshot } from "@/lib/auth-state";
+import { profileCompletionPath } from "@/lib/profile";
+import { useAuthStore } from "@/store/auth-store";
+import { Alert } from "../ui/Alert";
+import { Button } from "../ui/Button";
+import { Field } from "../ui/Field";
+import { Input } from "../ui/Input";
+import { PasswordInput } from "../ui/PasswordInput";
+import { AuthGuard } from "./AuthGuard";
 import { AuthShell } from "./AuthShell";
 
-export function LoginForm() {
-  const [pending, setPending] = useState(false);
+const schema = z.object({
+  email: z.email("Введите корректный email"),
+  password: z.string().min(8, "Пароль должен быть не короче 8 символов"),
+});
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setPending(true);
-    // TODO: интеграция с API авторизации
-    setTimeout(() => setPending(false), 400);
+type FormValues = z.infer<typeof schema>;
+
+export function LoginForm() {
+  const router = useRouter();
+  const hydrate = useAuthStore((state) => state.hydrate);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setError,
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  async function onSubmit(values: FormValues) {
+    try {
+      const auth = await login(values);
+      const snapshot = resolveApiAuthSnapshot(auth.user, auth.access_expires_at);
+      hydrate(snapshot);
+
+      if (snapshot.status === "authenticated_unverified") {
+        router.push("/verify-email");
+        return;
+      }
+
+      if (snapshot.status === "authenticated_profile_incomplete" && snapshot.user) {
+        router.push(profileCompletionPath(snapshot.user.role));
+        return;
+      }
+
+      router.push("/");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setError("root", { message: error.message });
+        return;
+      }
+      setError("root", {
+        message: "Не удалось выполнить вход. Попробуйте еще раз.",
+      });
+    }
   }
 
   return (
-    <AuthShell
-      title="Вход"
-      subtitle="Войдите, чтобы откликаться на смены и размещать объявления."
-      footer={
-        <>
-          Нет аккаунта?{" "}
-          <Link
-            href="/register"
-            className="font-medium text-[var(--accent)] hover:text-[var(--accent-hover)]"
-          >
-            Зарегистрироваться
-          </Link>
-        </>
-      }
-    >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div>
-          <label
-            htmlFor="login-email"
-            className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
-          >
-            Email
-          </label>
-          <input
-            id="login-email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-[var(--foreground)] outline-none ring-[var(--accent)] transition placeholder:text-[var(--muted)] focus:ring-2"
-            placeholder="you@example.com"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="login-password"
-            className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
-          >
-            Пароль
-          </label>
-          <input
-            id="login-password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            minLength={8}
-            className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-[var(--foreground)] outline-none ring-[var(--accent)] transition placeholder:text-[var(--muted)] focus:ring-2"
-            placeholder="••••••••"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={pending}
-          className="mt-2 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--accent-hover)] disabled:opacity-60"
-        >
-          {pending ? "Вход…" : "Войти"}
-        </button>
-      </form>
-    </AuthShell>
+    <AuthGuard mode="anonymous">
+      <AuthShell
+        title="Вход"
+        subtitle="Войдите, чтобы откликаться на смены, подтверждать почту и продолжать заполнение профиля."
+        footer={
+          <>
+            Нет аккаунта?{" "}
+            <Link
+              href="/register"
+              className="font-semibold text-[var(--accent)] hover:text-[var(--accent-hover)]"
+            >
+              Создать аккаунт
+            </Link>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {errors.root?.message ? <Alert tone="error">{errors.root.message}</Alert> : null}
+          <Field label="Email" htmlFor="login-email" error={errors.email?.message}>
+            <Input
+              id="login-email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              {...register("email")}
+            />
+          </Field>
+          <Field label="Пароль" htmlFor="login-password" error={errors.password?.message}>
+            <PasswordInput
+              id="login-password"
+              autoComplete="current-password"
+              placeholder="Минимум 8 символов"
+              {...register("password")}
+            />
+          </Field>
+          <Button type="submit" fullWidth disabled={isSubmitting}>
+            {isSubmitting ? "Входим..." : "Войти"}
+          </Button>
+        </form>
+      </AuthShell>
+    </AuthGuard>
   );
 }
