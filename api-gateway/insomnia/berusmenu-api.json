@@ -395,6 +395,262 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request"
+    },
+    {
+      "_id": "fld_inventory",
+      "parentId": "wrk_berusmenu_api",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "name": "Inventory",
+      "description": "PVZ owner and moderation requests. Requires verified auth cookies; unsafe requests require CSRF.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 400,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_inventory_create_pvz",
+      "parentId": "fld_inventory",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/pvz",
+      "name": "Create PVZ",
+      "description": "",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"city\": \"Moscow\",\n  \"address\": \"Tverskaya 1\",\n  \"company_name\": \"Beru\",\n  \"contact_phone\": \"+79990001122\",\n  \"contact_telegram\": \"@beru_pvz\",\n  \"description\": \"Main pickup point\",\n  \"lat\": 55.7558,\n  \"lng\": 37.6173\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 100,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_inventory_list_owner_pvz",
+      "parentId": "fld_inventory",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/pvz?page_size=20",
+      "name": "List Owner PVZ",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 200,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_inventory_get_pvz",
+      "parentId": "fld_inventory",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/pvz/1",
+      "name": "Get PVZ",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 300,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_inventory_update_pvz",
+      "parentId": "fld_inventory",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/pvz/1",
+      "name": "Update PVZ",
+      "description": "Fails closed if matching active-vacancy check is unavailable or reports active vacancies.",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"address\": \"Tverskaya 2\",\n  \"description\": \"Updated pickup point\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 400,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_inventory_list_pending_pvz",
+      "parentId": "fld_inventory",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/moderation/pvz?page_size=20",
+      "name": "List Pending PVZ",
+      "description": "",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 500,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_inventory_approve_pvz",
+      "parentId": "fld_inventory",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/moderation/pvz/1/approve",
+      "name": "Approve PVZ",
+      "description": "",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"comment\": \"Documents checked\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 600,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_inventory_reject_pvz",
+      "parentId": "fld_inventory",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/moderation/pvz/1/reject",
+      "name": "Reject PVZ",
+      "description": "",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"reason\": \"Invalid address\",\n  \"comment\": \"Owner should update legal address\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 700,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_inventory_block_pvz",
+      "parentId": "fld_inventory",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/moderation/pvz/1/block",
+      "name": "Block PVZ",
+      "description": "",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"comment\": \"Fraud report confirmed\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 800,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
     }
   ]
 }

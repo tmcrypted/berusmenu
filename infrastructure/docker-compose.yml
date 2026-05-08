@@ -90,6 +90,8 @@ services:
     depends_on:
       auth-service:
         condition: service_started
+      inventory-service:
+        condition: service_started
     ports:
       - "${API_GATEWAY_PORT:-8080}:8080"
     networks:
@@ -141,12 +143,22 @@ services:
       - berusmenu
 
   inventory-service:
-    profiles: ["future"]
     build:
-      context: ../inventory-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: inventory-service/Dockerfile
     container_name: berusmenu-inventory-service
     restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      GRPC_ADDR: :50052
+      POSTGRES_DSN: postgres://${POSTGRES_USER:-berusmenu}:${POSTGRES_PASSWORD:-berusmenu}@postgres:5432/${POSTGRES_DB:-berusmenu}?sslmode=disable
+      MATCHING_GRPC_ADDR: matching-service:50053
+      MIGRATIONS_DIR: internal/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${INVENTORY_GRPC_PORT:-50052}:50052"
     networks:
       - berusmenu
 

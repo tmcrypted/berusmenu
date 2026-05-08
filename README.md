@@ -10,7 +10,7 @@ Canonical Go import path:
 
 Local Go workspace:
 
-- `go.work` joins `proto`, `api-gateway`, `auth-service`, and `notification-service` for local development.
+- `go.work` joins `proto`, `api-gateway`, `auth-service`, `inventory-service`, and `notification-service` for local development.
 
 ## Структура монорепозитория
 
