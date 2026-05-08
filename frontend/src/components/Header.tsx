@@ -15,7 +15,7 @@ export function Header() {
   const isAuthenticated = status !== "anonymous" && !isBootstrapping;
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 flex h-[calc(var(--header-height)+0.5rem)] items-center border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_88%,transparent)] backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-0 z-50 flex h-[var(--header-height)] items-center border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_88%,transparent)] backdrop-blur-xl">
       <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
         <Link href="/" className="group min-w-0 shrink">
           <span className="inline-flex items-baseline text-sm font-semibold tracking-tight text-[var(--foreground)] transition group-hover:text-[var(--accent)] sm:text-base">
