@@ -9,6 +9,7 @@ import {
   WorkerHomeContent,
 } from "@/components/home/HomePanels";
 import { profileCompletionPath } from "@/lib/profile";
+import { Spinner } from "@/components/ui/Spinner";
 
 export default function Home() {
   const router = useRouter();
@@ -29,14 +30,20 @@ export default function Home() {
   const readyWorker =
     status === "authenticated_ready" && user && user.role !== "owner";
   const isBootstrapping = status === "loading";
+  const isRedirecting =
+    status === "authenticated_unverified" ||
+    (status === "authenticated_profile_incomplete" && Boolean(user));
 
   return (
     <div className="app-shell">
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        {isBootstrapping ? (
+        {isBootstrapping || isRedirecting ? (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
             <div className="min-h-[18rem] rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] shadow-[var(--shadow-soft)]" />
             <div className="min-h-[18rem] rounded-[2rem] border border-[var(--border)] bg-[var(--card)] shadow-[var(--shadow-soft)]" />
+            <div className="sr-only">
+              <Spinner />
+            </div>
           </div>
         ) : readyOwner && user ? (
           <OwnerHomeContent user={user} />

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useResolvedAuthSnapshot } from "@/components/auth/AuthStoreHydrator";
+import { profileCompletionPath } from "@/lib/profile";
 import { AccountMenu } from "./AccountMenu";
 
 const headerChrome =
@@ -13,11 +14,17 @@ export function Header() {
 
   const isBootstrapping = status === "loading";
   const isAuthenticated = status !== "anonymous" && !isBootstrapping;
+  const homeHref =
+    status === "authenticated_profile_incomplete" && user
+      ? profileCompletionPath(user.role)
+      : status === "authenticated_unverified"
+        ? "/verify-email"
+        : "/";
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 flex h-[var(--header-height)] items-center border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_88%,transparent)] backdrop-blur-xl">
       <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6 lg:px-8">
-        <Link href="/" className="group min-w-0 shrink">
+        <Link href={homeHref} className="group min-w-0 shrink">
           <span className="inline-flex items-baseline text-sm font-semibold tracking-tight text-[var(--foreground)] transition group-hover:text-[var(--accent)] sm:text-base">
             <span className="truncate">Беру Смену</span>
             <span className="font-medium text-[var(--muted)]">.ру</span>
