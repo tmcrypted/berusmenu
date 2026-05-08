@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useResolvedAuthSnapshot } from "@/components/auth/AuthStoreHydrator";
 import {
   GuestHomeContent,
+  ModeratorHomeContent,
   OwnerHomeContent,
   WorkerHomeContent,
 } from "@/components/home/HomePanels";
@@ -27,8 +28,10 @@ export default function Home() {
   }, [router, status, user]);
 
   const readyOwner = status === "authenticated_ready" && user?.role === "owner";
+  const readyModerator =
+    status === "authenticated_ready" && user?.role === "moderator";
   const readyWorker =
-    status === "authenticated_ready" && user && user.role !== "owner";
+    status === "authenticated_ready" && user && user.role !== "owner" && user.role !== "moderator";
   const isBootstrapping = status === "loading";
   const isRedirecting =
     status === "authenticated_unverified" ||
@@ -47,6 +50,8 @@ export default function Home() {
           </div>
         ) : readyOwner && user ? (
           <OwnerHomeContent user={user} />
+        ) : readyModerator && user ? (
+          <ModeratorHomeContent user={user} />
         ) : readyWorker && user ? (
           <WorkerHomeContent user={user} />
         ) : (

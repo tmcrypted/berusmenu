@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { ShiftList } from "@/components/ShiftList";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { mockOwnerPvz, mockOwnerVacancies } from "@/data/mock-owner";
+import { mockOwnerVacancies } from "@/data/mock-owner";
 import { roleLabel } from "@/lib/profile";
 import type { AuthStatus, User } from "@/types/auth";
 
@@ -146,13 +147,19 @@ export function OwnerHomeContent({ user }: { user: User }) {
           Здравствуйте{user.full_name?.trim() ? `, ${user.full_name.trim()}` : ""}
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
-          Ниже — моки точек и вакансий. Когда подключим inventory-service и matching-service, эти
-          блоки станут живыми.
+          ПВЗ уже работают через inventory-service. Вакансии подключим после matching-service.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Button type="button" className="rounded-xl">
-            Добавить ПВЗ (мок)
-          </Button>
+          <Link href="/owner/pvz/new">
+            <Button type="button" className="rounded-xl">
+              Добавить ПВЗ
+            </Button>
+          </Link>
+          <Link href="/owner/pvz">
+            <Button type="button" variant="secondary" className="rounded-xl">
+              Мои ПВЗ
+            </Button>
+          </Link>
           <Button type="button" variant="secondary" className="rounded-xl">
             Создать вакансию (мок)
           </Button>
@@ -161,19 +168,15 @@ export function OwnerHomeContent({ user }: { user: User }) {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <section className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow-soft)]">
-          <h2 className="text-lg font-semibold text-[var(--foreground)]">Мои ПВЗ</h2>
-          <ul className="mt-4 space-y-3">
-            {mockOwnerPvz.map((pvz) => (
-              <li
-                key={pvz.id}
-                className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3"
-              >
-                <p className="font-medium text-[var(--foreground)]">{pvz.title}</p>
-                <p className="text-sm text-[var(--muted)]">{pvz.address}</p>
-                <p className="mt-1 text-xs font-medium text-[var(--accent)]">{pvz.statusLabel}</p>
-              </li>
-            ))}
-          </ul>
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">ПВЗ</h2>
+          <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+            Откройте список ПВЗ, чтобы увидеть реальные статусы модерации, причины отклонения и форму новой заявки.
+          </p>
+          <Link href="/owner/pvz" className="mt-4 inline-flex">
+            <Button type="button" variant="secondary" className="rounded-xl">
+              Перейти к ПВЗ
+            </Button>
+          </Link>
         </section>
         <section className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow-soft)]">
           <h2 className="text-lg font-semibold text-[var(--foreground)]">Мои вакансии</h2>
@@ -192,6 +195,31 @@ export function OwnerHomeContent({ user }: { user: User }) {
             ))}
           </ul>
         </section>
+      </div>
+    </>
+  );
+}
+
+export function ModeratorHomeContent({ user }: { user: User }) {
+  return (
+    <>
+      <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
+          Кабинет модератора
+        </p>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-3xl">
+          Здравствуйте{user.full_name?.trim() ? `, ${user.full_name.trim()}` : ""}
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
+          Ваша рабочая зона — очередь заявок ПВЗ. Аккаунты модераторов назначаются через базу данных.
+        </p>
+        <div className="mt-6">
+          <Link href="/moderation/pvz">
+            <Button type="button" className="rounded-xl">
+              Открыть модерацию ПВЗ
+            </Button>
+          </Link>
+        </div>
       </div>
     </>
   );

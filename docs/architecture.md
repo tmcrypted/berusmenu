@@ -68,6 +68,7 @@ flowchart LR
 - PVZ registration
 - PVZ moderation
 - PVZ updates and repeated moderation
+- owner spam cleanup: timed auth block plus inventory-owned PVZ cleanup
 
 ### Matching
 

@@ -61,6 +61,12 @@ type ModeratePvzInput struct {
 	Comment *string
 }
 
+type DeleteOwnerPvzRequestsInput struct {
+	Actor   Actor
+	OwnerID int64
+	Comment *string
+}
+
 type Page struct {
 	Limit  uint64
 	Offset uint64

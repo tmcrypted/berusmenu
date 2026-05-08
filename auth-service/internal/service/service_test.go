@@ -143,6 +143,18 @@ func TestLogin(t *testing.T) {
 			},
 			wantErr: ErrPermissionDenied,
 		},
+		{
+			name: "expired block can login",
+			setup: func(users *MockUserRepository) {
+				user := sampleUser()
+				user.PasswordHash = string(hash)
+				user.Status = "blocked"
+				expired := time.Now().Add(-time.Minute)
+				user.BlockedUntil = &expired
+				users.EXPECT().GetUserByEmail(gomock.Any(), "worker@example.com").Return(user, nil)
+				users.EXPECT().CreateRefreshSession(gomock.Any(), user.ID, gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -352,6 +364,77 @@ func TestValidateToken(t *testing.T) {
 			if out.Valid != tt.wantValid {
 				t.Fatalf("valid = %v, want %v", out.Valid, tt.wantValid)
 			}
+		})
+	}
+}
+
+func TestBlockUser(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   dto.BlockUserInput
+		setup   func(*MockUserRepository)
+		wantErr error
+	}{
+		{
+			name: "success",
+			input: dto.BlockUserInput{
+				ActorUserID:  99,
+				ActorRole:    commonv1.UserRole_USER_ROLE_MODERATOR,
+				UserID:       7,
+				BlockedUntil: time.Now().Add(time.Hour),
+			},
+			setup: func(users *MockUserRepository) {
+				user := sampleUser()
+				blocked := user
+				blocked.Status = "blocked"
+				users.EXPECT().GetUserByID(gomock.Any(), int64(7)).Return(user, nil)
+				users.EXPECT().BlockUser(gomock.Any(), int64(7), gomock.Any()).Return(blocked, nil)
+			},
+		},
+		{
+			name: "owner cannot block",
+			input: dto.BlockUserInput{
+				ActorUserID:  99,
+				ActorRole:    commonv1.UserRole_USER_ROLE_OWNER,
+				UserID:       7,
+				BlockedUntil: time.Now().Add(time.Hour),
+			},
+			setup:   func(users *MockUserRepository) {},
+			wantErr: ErrPermissionDenied,
+		},
+		{
+			name: "cannot block self",
+			input: dto.BlockUserInput{
+				ActorUserID:  7,
+				ActorRole:    commonv1.UserRole_USER_ROLE_MODERATOR,
+				UserID:       7,
+				BlockedUntil: time.Now().Add(time.Hour),
+			},
+			setup:   func(users *MockUserRepository) {},
+			wantErr: ErrFailedPrecondition,
+		},
+		{
+			name: "duration required",
+			input: dto.BlockUserInput{
+				ActorUserID:  99,
+				ActorRole:    commonv1.UserRole_USER_ROLE_MODERATOR,
+				UserID:       7,
+				BlockedUntil: time.Now().Add(-time.Hour),
+			},
+			setup:   func(users *MockUserRepository) {},
+			wantErr: ErrInvalidArgument,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			users := NewMockUserRepository(ctrl)
+			tt.setup(users)
+
+			svc := New(testConfig(), users, NewMockVerificationStore(ctrl), NewMockEventPublisher(ctrl))
+			_, err := svc.BlockUser(context.Background(), tt.input)
+			assertErrorKind(t, err, tt.wantErr)
 		})
 	}
 }

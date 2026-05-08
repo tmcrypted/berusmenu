@@ -23,6 +23,7 @@ type PvzRepository interface {
 	ListPendingPvz(ctx context.Context, limit uint64, offset uint64) ([]store.Pvz, error)
 	UpdatePvzWithEvent(ctx context.Context, id int64, patch store.PvzPatch, actorUserID int64) (store.Pvz, error)
 	ModeratePvzWithEvent(ctx context.Context, id int64, status commonv1.PvzStatus, actorUserID int64, reason *string, action commonv1.PvzModerationAction, comment *string) (store.Pvz, error)
+	DeletePendingAndBlockOwnerPvz(ctx context.Context, ownerID int64, actorUserID int64, comment *string) (int64, int64, error)
 }
 
 type ActiveVacancyChecker interface {
@@ -182,6 +183,20 @@ func (s *Service) RejectPvz(ctx context.Context, input dto.ModeratePvzInput) (st
 
 func (s *Service) BlockPvz(ctx context.Context, input dto.ModeratePvzInput) (store.Pvz, error) {
 	return s.moderate(ctx, input, commonv1.PvzStatus_PVZ_STATUS_BLOCKED, nil, commonv1.PvzModerationAction_PVZ_MODERATION_ACTION_BLOCKED)
+}
+
+func (s *Service) DeleteOwnerPvzRequests(ctx context.Context, input dto.DeleteOwnerPvzRequestsInput) (int64, int64, error) {
+	if err := requireRole(input.Actor, commonv1.UserRole_USER_ROLE_MODERATOR); err != nil {
+		return 0, 0, err
+	}
+	if input.OwnerID <= 0 {
+		return 0, 0, serviceError(ErrInvalidArgument, "owner_id is required")
+	}
+	deleted, blocked, err := s.pvz.DeletePendingAndBlockOwnerPvz(ctx, input.OwnerID, input.Actor.UserID, trimOptional(input.Comment))
+	if err != nil {
+		return 0, 0, serviceError(ErrInternal, "failed to delete owner pvz requests")
+	}
+	return deleted, blocked, nil
 }
 
 func (s *Service) moderate(ctx context.Context, input dto.ModeratePvzInput, status commonv1.PvzStatus, reason *string, action commonv1.PvzModerationAction) (store.Pvz, error) {

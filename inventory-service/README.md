@@ -8,6 +8,7 @@
 - read owner PVZ list
 - update PVZ data
 - approve/reject/block PVZ
+- moderator spam cleanup for an owner: delete pending PVZ requests and block remaining PVZ
 
 ## Owned schema
 
@@ -24,6 +25,7 @@ Tables:
 - owner may edit PVZ data
 - PVZ update is forbidden if there are active vacancy with status `published` or `assigned`
 - after update PVZ returns to `pending`
+- spam cleanup deletes only `pending` PVZ for the owner and sets the owner's remaining PVZ to `blocked`
 
 ## Integrations
 
@@ -55,3 +57,4 @@ When `matching-service` is implemented, add an end-to-end test that proves PVZ u
 2. moderation queue and approve/reject/block decisions
 3. approved PVZ check for vacancy creation
 4. active vacancy guard for PVZ updates through the matching interface
+5. moderator owner cleanup for spam PVZ submissions

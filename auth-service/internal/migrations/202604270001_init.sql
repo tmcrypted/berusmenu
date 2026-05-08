@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS auth.users (
     phone TEXT NULL,
     avatar_url TEXT NULL,
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'blocked')),
+    blocked_until TIMESTAMPTZ NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

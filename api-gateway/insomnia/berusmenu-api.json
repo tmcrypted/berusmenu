@@ -651,6 +651,41 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request"
+    },
+    {
+      "_id": "req_inventory_block_user_delete_pvz",
+      "parentId": "fld_inventory",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/moderation/users/1/block-and-delete-pvz",
+      "name": "Block User and Cleanup PVZ",
+      "description": "Moderator-only spam cleanup. Temporarily blocks the owner, deletes pending PVZ requests, and moves remaining owner PVZ to blocked.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"reason\": \"Spam PVZ submissions\",\n  \"block_duration_minutes\": 1440,\n  \"comment\": \"Bulk spam cleanup\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 900,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
     }
   ]
 }

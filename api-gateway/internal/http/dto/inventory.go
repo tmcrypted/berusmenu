@@ -30,3 +30,9 @@ type RejectPvzRequest struct {
 type ModerationCommentRequest struct {
 	Comment *string `json:"comment"`
 }
+
+type BlockUserAndDeletePvzRequest struct {
+	Reason               string  `json:"reason" binding:"required"`
+	BlockDurationMinutes int64   `json:"block_duration_minutes" binding:"required,min=1"`
+	Comment              *string `json:"comment"`
+}

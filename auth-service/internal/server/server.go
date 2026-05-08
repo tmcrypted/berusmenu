@@ -12,6 +12,7 @@ import (
 	"github.com/tmcrypted/berusmenu/auth-service/internal/store"
 	"github.com/tmcrypted/berusmenu/auth-service/internal/verification"
 	authv1 "github.com/tmcrypted/berusmenu/proto/gen/go/auth/v1"
+	commonv1 "github.com/tmcrypted/berusmenu/proto/gen/go/common/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -105,6 +106,27 @@ func (s *Server) GetUser(ctx context.Context, req *authv1.GetUserRequest) (*auth
 	return &authv1.GetUserResponse{User: toProtoUser(user)}, nil
 }
 
+func (s *Server) BlockUser(ctx context.Context, req *authv1.BlockUserRequest) (*authv1.BlockUserResponse, error) {
+	actorUserID, actorRole, err := actorFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.GetBlockedUntil() == nil {
+		return nil, status.Error(codes.InvalidArgument, "blocked_until is required")
+	}
+	user, err := s.auth.BlockUser(ctx, dto.BlockUserInput{
+		ActorUserID:  actorUserID,
+		ActorRole:    actorRole,
+		UserID:       req.GetUserId(),
+		Reason:       req.Reason,
+		BlockedUntil: req.GetBlockedUntil().AsTime(),
+	})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &authv1.BlockUserResponse{User: toProtoUser(user)}, nil
+}
+
 func (s *Server) UpdateProfile(ctx context.Context, req *authv1.UpdateProfileRequest) (*authv1.UpdateProfileResponse, error) {
 	userID, err := userIDFromMetadata(ctx)
 	if err != nil {
@@ -194,6 +216,37 @@ func userIDFromMetadata(ctx context.Context) (int64, error) {
 		return 0, status.Error(codes.Unauthenticated, "invalid identity metadata")
 	}
 	return userID, nil
+}
+
+func actorFromMetadata(ctx context.Context) (int64, commonv1.UserRole, error) {
+	userID, err := userIDFromMetadata(ctx)
+	if err != nil {
+		return 0, commonv1.UserRole_USER_ROLE_UNSPECIFIED, err
+	}
+
+	md, _ := metadata.FromIncomingContext(ctx)
+	roles := md.Get("x-user-role")
+	if len(roles) == 0 {
+		return 0, commonv1.UserRole_USER_ROLE_UNSPECIFIED, status.Error(codes.Unauthenticated, "missing identity metadata")
+	}
+	role := roleFromMetadata(roles[0])
+	if role == commonv1.UserRole_USER_ROLE_UNSPECIFIED {
+		return 0, commonv1.UserRole_USER_ROLE_UNSPECIFIED, status.Error(codes.Unauthenticated, "invalid identity metadata")
+	}
+	return userID, role, nil
+}
+
+func roleFromMetadata(value string) commonv1.UserRole {
+	switch value {
+	case "owner":
+		return commonv1.UserRole_USER_ROLE_OWNER
+	case "worker":
+		return commonv1.UserRole_USER_ROLE_WORKER
+	case "moderator":
+		return commonv1.UserRole_USER_ROLE_MODERATOR
+	default:
+		return commonv1.UserRole_USER_ROLE_UNSPECIFIED
+	}
 }
 
 func toGRPCError(err error) error {

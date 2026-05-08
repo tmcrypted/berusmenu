@@ -55,6 +55,8 @@ Can:
 - reject PVZ
 - block PVZ
 - inspect moderation queue
+- temporarily block spam users
+- delete a spam owner's pending PVZ requests and move their remaining PVZ to blocked
 
 Cannot:
 

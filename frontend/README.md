@@ -7,7 +7,9 @@ Frontend workspace for the Berusmenu MVP.
 - public vacancy-style home with mocked shifts
 - registration / login / email verification UI
 - post-verify profile completion for `worker` and `owner`
-- owner and worker entry points for later domain flows
+- owner PVZ flow through `inventory-service`
+- moderator PVZ moderation panel
+- worker entry points for later domain flows
 - responsive web UI for mobile, tablet, and desktop
 
 ## Current stack
@@ -37,6 +39,8 @@ Frontend workspace for the Berusmenu MVP.
 - verified but incomplete user is redirected to a role-specific completion screen
 - worker cannot proceed to responses until profile completion
 - owner completes profile first and then proceeds to the future PVZ flow
+- owner can create/list/edit PVZ through inventory endpoints
+- moderator accounts are assigned outside the UI and can process pending PVZ requests, including timed owner spam block with PVZ cleanup
 - both light and dark themes are first-class and switched manually
 - new UI must remain usable across phones, tablets, and desktop screens
 - public home can use mocked vacancies until matching endpoints are ready

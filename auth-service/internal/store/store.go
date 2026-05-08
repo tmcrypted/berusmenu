@@ -36,6 +36,7 @@ type User struct {
 	Phone           *string
 	AvatarURL       *string
 	Status          string
+	BlockedUntil    *time.Time
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
@@ -232,6 +233,20 @@ func (s *Store) UpdateProfile(ctx context.Context, userID int64, fullName *strin
 	return scanUser(row)
 }
 
+func (s *Store) BlockUser(ctx context.Context, userID int64, blockedUntil time.Time) (User, error) {
+	sql, args, err := psql.Update("auth.users").
+		Set("status", "blocked").
+		Set("blocked_until", blockedUntil).
+		Set("updated_at", sq.Expr("NOW()")).
+		Where(sq.Eq{"id": userID}).
+		Suffix("RETURNING " + userColumns()).
+		ToSql()
+	if err != nil {
+		return User{}, err
+	}
+	return scanUser(s.pool.QueryRow(ctx, sql, args...))
+}
+
 func scanUser(row pgx.Row) (User, error) {
 	var user User
 	var role string
@@ -245,6 +260,7 @@ func scanUser(row pgx.Row) (User, error) {
 		&user.Phone,
 		&user.AvatarURL,
 		&user.Status,
+		&user.BlockedUntil,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -268,7 +284,7 @@ func insertRefreshSession(ctx context.Context, tx pgx.Tx, userID int64, refreshT
 }
 
 func userColumns() string {
-	return "id, email, email_verified_at, password_hash, role, full_name, phone, avatar_url, status, created_at, updated_at"
+	return "id, email, email_verified_at, password_hash, role, full_name, phone, avatar_url, status, blocked_until, created_at, updated_at"
 }
 
 func refreshSessionInsert(userID int64, refreshToken string, expiresAt time.Time) sq.InsertBuilder {
@@ -288,6 +304,7 @@ func activeRefreshSessionUserSelect(refreshToken string, forUpdate bool) sq.Sele
 		"u.phone",
 		"u.avatar_url",
 		"u.status",
+		"u.blocked_until",
 		"u.created_at",
 		"u.updated_at",
 	).

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { logout } from "@/lib/auth";
 import { getProfileNavHref, roleLabel } from "@/lib/profile";
-import { mockOwnerPvz } from "@/data/mock-owner";
 import type { AuthStatus, User } from "@/types/auth";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "./ui/Button";
@@ -55,6 +54,7 @@ export function AccountMenu({ user, status }: Props) {
 
   const profileHref = getProfileNavHref(status, user);
   const isOwner = user.role === "owner";
+  const isModerator = user.role === "moderator";
 
   return (
     <div className="relative w-full" ref={rootRef}>
@@ -70,7 +70,7 @@ export function AccountMenu({ user, status }: Props) {
           <span className="block truncate text-[var(--muted)]">{user.email}</span>
         </span>
         <span className="shrink-0 text-[var(--muted)]" aria-hidden>
-          {open ? "▴" : "▾"}
+          {open ? "▲" : "▼"}
         </span>
       </button>
 
@@ -102,35 +102,27 @@ export function AccountMenu({ user, status }: Props) {
             </Link>
           </div>
 
-          {isOwner ? (
+          {isOwner || isModerator ? (
             <div className="border-b border-[var(--border)] py-3">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-                Мои ПВЗ
+                {isOwner ? "ПВЗ" : "Модерация"}
               </p>
-              <p className="mt-1 text-xs text-[var(--muted)]">
-                Пока без API — демо-данные. Реальные статусы модерации придут из inventory-service.
-              </p>
-              <ul className="mt-3 space-y-2">
-                {mockOwnerPvz.map((pvz) => (
-                  <li
-                    key={pvz.id}
-                    className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
-                  >
-                    <p className="font-medium text-[var(--foreground)]">{pvz.title}</p>
-                    <p className="text-xs text-[var(--muted)]">{pvz.address}</p>
-                    <p className="mt-1 text-xs text-[var(--accent)]">{pvz.statusLabel}</p>
-                  </li>
-                ))}
-              </ul>
-              <Button
-                type="button"
-                variant="secondary"
-                fullWidth
-                className="mt-3 rounded-xl text-sm"
+              <Link
+                href={isOwner ? "/owner/pvz" : "/moderation/pvz"}
                 onClick={() => setOpen(false)}
+                className="mt-3 block"
               >
-                Подать заявку на новый ПВЗ (мок)
-              </Button>
+                <Button type="button" variant="secondary" fullWidth className="rounded-xl text-sm">
+                  {isOwner ? "Мои ПВЗ" : "Очередь ПВЗ"}
+                </Button>
+              </Link>
+              {isOwner ? (
+                <Link href="/owner/pvz/new" onClick={() => setOpen(false)} className="mt-3 block">
+                  <Button type="button" fullWidth className="rounded-xl text-sm">
+                    Новый ПВЗ
+                  </Button>
+                </Link>
+              ) : null}
             </div>
           ) : null}
 

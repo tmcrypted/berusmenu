@@ -178,6 +178,22 @@ func (s *Server) BlockPvz(ctx context.Context, req *inventoryv1.BlockPvzRequest)
 	return &inventoryv1.BlockPvzResponse{Pvz: toProtoPvz(pvz)}, nil
 }
 
+func (s *Server) DeleteOwnerPvzRequests(ctx context.Context, req *inventoryv1.DeleteOwnerPvzRequestsRequest) (*inventoryv1.DeleteOwnerPvzRequestsResponse, error) {
+	actor, err := actorFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	deleted, blocked, err := s.inventory.DeleteOwnerPvzRequests(ctx, dto.DeleteOwnerPvzRequestsInput{
+		Actor:   actor,
+		OwnerID: req.GetOwnerId(),
+		Comment: req.Comment,
+	})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &inventoryv1.DeleteOwnerPvzRequestsResponse{DeletedCount: deleted, BlockedCount: blocked}, nil
+}
+
 func actorFromMetadata(ctx context.Context) (dto.Actor, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {

@@ -63,6 +63,7 @@ Local Go workspace:
 - `notification-service` отделен от доменных сервисов и не имеет своей БД в MVP.
 - Email channel в MVP: log/stub sender для local development; Mailganer planned as production provider.
 - PVZ update directly mutates `inventory.pvz`, sets it back to `pending`, and is forbidden while active vacancy exists.
+- Moderator spam cleanup temporarily blocks the owner account in `auth-service`, deletes that owner's pending PVZ requests, and moves the owner's remaining PVZ to `blocked`.
 - Chat создается сразу после `response`.
 - Chat становится read-only после `assignment.completed` и `assignment.cancelled`.
 

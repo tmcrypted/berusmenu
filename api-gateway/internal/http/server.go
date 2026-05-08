@@ -50,7 +50,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 
 	api := router.Group("/v1")
 	authhandler.RegisterRoutes(api, deps.Config, deps.Auth, authMiddleware, csrfMiddleware, verifiedMiddleware)
-	inventoryhandler.RegisterRoutes(api, deps.Inventory, authMiddleware, csrfMiddleware, verifiedMiddleware)
+	inventoryhandler.RegisterRoutes(api, deps.Inventory, deps.Auth, authMiddleware, csrfMiddleware, verifiedMiddleware)
 	matchinghandler.RegisterRoutes(api, deps.Matching, authMiddleware, csrfMiddleware, verifiedMiddleware)
 	communicationhandler.RegisterRoutes(router, api, deps.Communication, authMiddleware, csrfMiddleware, verifiedMiddleware)
 

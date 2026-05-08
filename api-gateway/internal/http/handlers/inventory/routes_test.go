@@ -108,7 +108,57 @@ func TestListPendingPvzParsesPagination(t *testing.T) {
 	}
 }
 
+func TestBlockUserAndDeletePvzCallsAuthThenInventory(t *testing.T) {
+	authClient := &fakeAuthClient{verified: true, role: commonv1.UserRole_USER_ROLE_MODERATOR}
+	inventoryClient := &fakeInventoryClient{
+		deleteOwnerPvzRequests: func(ctx context.Context, req *inventoryv1.DeleteOwnerPvzRequestsRequest, opts ...grpc.CallOption) (*inventoryv1.DeleteOwnerPvzRequestsResponse, error) {
+			if req.GetOwnerId() != 42 || req.GetComment() != "spam cleanup" {
+				t.Fatalf("inventory request = %+v", req)
+			}
+			md, ok := metadata.FromOutgoingContext(ctx)
+			if !ok || md.Get("x-user-role")[0] != "moderator" {
+				t.Fatalf("missing moderator metadata: %v", md)
+			}
+			return &inventoryv1.DeleteOwnerPvzRequestsResponse{DeletedCount: 3, BlockedCount: 2}, nil
+		},
+	}
+	router := newInventoryTestRouterWithAuth(inventoryClient, authClient)
+
+	rec := doInventoryJSON(router, http.MethodPost, "/v1/moderation/users/42/block-and-delete-pvz", `{
+		"reason":"spam",
+		"block_duration_minutes":60,
+		"comment":"spam cleanup"
+	}`, "access")
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"deleted_count":"3"`) {
+		t.Fatalf("unexpected body: %s", rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"blocked_count":"2"`) {
+		t.Fatalf("unexpected body: %s", rec.Body.String())
+	}
+	if authClient.blockedUserID != 42 || authClient.blockReason != "spam" || authClient.blockedUntil.IsZero() {
+		t.Fatalf("auth block call = id %d reason %q until %s", authClient.blockedUserID, authClient.blockReason, authClient.blockedUntil)
+	}
+}
+
+func TestBlockUserAndDeletePvzRequiresReason(t *testing.T) {
+	router := newInventoryTestRouterWithAuth(&fakeInventoryClient{}, &fakeAuthClient{verified: true, role: commonv1.UserRole_USER_ROLE_MODERATOR})
+
+	rec := doInventoryJSON(router, http.MethodPost, "/v1/moderation/users/42/block-and-delete-pvz", `{}`, "access")
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+}
+
 func newInventoryTestRouter(inventoryClient inventoryv1.InventoryServiceClient, verified bool) *gin.Engine {
+	return newInventoryTestRouterWithAuth(inventoryClient, &fakeAuthClient{verified: verified, role: commonv1.UserRole_USER_ROLE_OWNER})
+}
+
+func newInventoryTestRouterWithAuth(inventoryClient inventoryv1.InventoryServiceClient, authClient *fakeAuthClient) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(middleware.RequestID())
@@ -117,8 +167,7 @@ func newInventoryTestRouter(inventoryClient inventoryv1.InventoryServiceClient, 
 		CSRFCookieName:   "berusmenu_csrf",
 		CSRFHeaderName:   "X-CSRF-Token",
 	}
-	authClient := fakeAuthClient{verified: verified}
-	RegisterRoutes(router.Group("/v1"), inventoryClient, middleware.Auth(authClient, cfg), middleware.CSRF(cfg), middleware.RequireVerified())
+	RegisterRoutes(router.Group("/v1"), inventoryClient, authClient, middleware.Auth(authClient, cfg), middleware.CSRF(cfg), middleware.RequireVerified())
 	return router
 }
 
@@ -160,26 +209,42 @@ func sampleGatewayPvz() *inventoryv1.Pvz {
 
 type fakeAuthClient struct {
 	authv1.AuthServiceClient
-	verified bool
+	verified      bool
+	role          commonv1.UserRole
+	blockedUserID int64
+	blockReason   string
+	blockedUntil  time.Time
 }
 
-func (f fakeAuthClient) ValidateToken(ctx context.Context, req *authv1.ValidateTokenRequest, opts ...grpc.CallOption) (*authv1.ValidateTokenResponse, error) {
+func (f *fakeAuthClient) ValidateToken(ctx context.Context, req *authv1.ValidateTokenRequest, opts ...grpc.CallOption) (*authv1.ValidateTokenResponse, error) {
+	role := f.role
+	if role == commonv1.UserRole_USER_ROLE_UNSPECIFIED {
+		role = commonv1.UserRole_USER_ROLE_OWNER
+	}
 	return &authv1.ValidateTokenResponse{
 		Valid:         true,
 		UserId:        7,
-		Role:          commonv1.UserRole_USER_ROLE_OWNER,
+		Role:          role,
 		Email:         "owner@example.com",
 		EmailVerified: f.verified,
 	}, nil
 }
 
+func (f *fakeAuthClient) BlockUser(ctx context.Context, req *authv1.BlockUserRequest, opts ...grpc.CallOption) (*authv1.BlockUserResponse, error) {
+	f.blockedUserID = req.GetUserId()
+	f.blockReason = req.GetReason()
+	f.blockedUntil = req.GetBlockedUntil().AsTime()
+	return &authv1.BlockUserResponse{User: &authv1.User{Id: req.GetUserId()}}, nil
+}
+
 type fakeInventoryClient struct {
 	inventoryv1.InventoryServiceClient
-	createPvz      func(context.Context, *inventoryv1.CreatePvzRequest, ...grpc.CallOption) (*inventoryv1.CreatePvzResponse, error)
-	listOwnerPvz   func(context.Context, *inventoryv1.ListOwnerPvzRequest, ...grpc.CallOption) (*inventoryv1.ListOwnerPvzResponse, error)
-	getPvz         func(context.Context, *inventoryv1.GetPvzRequest, ...grpc.CallOption) (*inventoryv1.GetPvzResponse, error)
-	updatePvz      func(context.Context, *inventoryv1.UpdatePvzRequest, ...grpc.CallOption) (*inventoryv1.UpdatePvzResponse, error)
-	listPendingPvz func(context.Context, *inventoryv1.ListPendingPvzRequest, ...grpc.CallOption) (*inventoryv1.ListPendingPvzResponse, error)
+	createPvz              func(context.Context, *inventoryv1.CreatePvzRequest, ...grpc.CallOption) (*inventoryv1.CreatePvzResponse, error)
+	listOwnerPvz           func(context.Context, *inventoryv1.ListOwnerPvzRequest, ...grpc.CallOption) (*inventoryv1.ListOwnerPvzResponse, error)
+	getPvz                 func(context.Context, *inventoryv1.GetPvzRequest, ...grpc.CallOption) (*inventoryv1.GetPvzResponse, error)
+	updatePvz              func(context.Context, *inventoryv1.UpdatePvzRequest, ...grpc.CallOption) (*inventoryv1.UpdatePvzResponse, error)
+	listPendingPvz         func(context.Context, *inventoryv1.ListPendingPvzRequest, ...grpc.CallOption) (*inventoryv1.ListPendingPvzResponse, error)
+	deleteOwnerPvzRequests func(context.Context, *inventoryv1.DeleteOwnerPvzRequestsRequest, ...grpc.CallOption) (*inventoryv1.DeleteOwnerPvzRequestsResponse, error)
 }
 
 func (f *fakeInventoryClient) CreatePvz(ctx context.Context, req *inventoryv1.CreatePvzRequest, opts ...grpc.CallOption) (*inventoryv1.CreatePvzResponse, error) {
@@ -231,4 +296,11 @@ func (f *fakeInventoryClient) RejectPvz(ctx context.Context, req *inventoryv1.Re
 
 func (f *fakeInventoryClient) BlockPvz(ctx context.Context, req *inventoryv1.BlockPvzRequest, opts ...grpc.CallOption) (*inventoryv1.BlockPvzResponse, error) {
 	return &inventoryv1.BlockPvzResponse{Pvz: sampleGatewayPvz()}, nil
+}
+
+func (f *fakeInventoryClient) DeleteOwnerPvzRequests(ctx context.Context, req *inventoryv1.DeleteOwnerPvzRequestsRequest, opts ...grpc.CallOption) (*inventoryv1.DeleteOwnerPvzRequestsResponse, error) {
+	if f.deleteOwnerPvzRequests != nil {
+		return f.deleteOwnerPvzRequests(ctx, req, opts...)
+	}
+	return &inventoryv1.DeleteOwnerPvzRequestsResponse{}, nil
 }

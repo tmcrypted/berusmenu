@@ -148,6 +148,37 @@ func TestCheckPvzForVacancyRequiresApprovedOwnPvz(t *testing.T) {
 	}
 }
 
+func TestDeleteOwnerPvzRequestsRequiresModeratorAndCleansOwner(t *testing.T) {
+	repo := newFakeRepo()
+	repo.items[10] = samplePvz(10, 7, commonv1.PvzStatus_PVZ_STATUS_PENDING)
+	repo.items[11] = samplePvz(11, 7, commonv1.PvzStatus_PVZ_STATUS_APPROVED)
+	repo.items[12] = samplePvz(12, 7, commonv1.PvzStatus_PVZ_STATUS_REJECTED)
+	repo.items[13] = samplePvz(13, 8, commonv1.PvzStatus_PVZ_STATUS_APPROVED)
+	svc := New(repo, fakeChecker{})
+
+	_, _, err := svc.DeleteOwnerPvzRequests(context.Background(), dto.DeleteOwnerPvzRequestsInput{Actor: ownerActor(), OwnerID: 7})
+	if !errors.Is(err, ErrPermissionDenied) {
+		t.Fatalf("owner cleanup error = %v, want permission denied", err)
+	}
+
+	deleted, blocked, err := svc.DeleteOwnerPvzRequests(context.Background(), dto.DeleteOwnerPvzRequestsInput{Actor: moderatorActor(), OwnerID: 7})
+	if err != nil {
+		t.Fatalf("DeleteOwnerPvzRequests returned error: %v", err)
+	}
+	if deleted != 1 || blocked != 2 {
+		t.Fatalf("deleted=%d blocked=%d, want 1 and 2", deleted, blocked)
+	}
+	if _, ok := repo.items[10]; ok {
+		t.Fatalf("pending pvz was not deleted")
+	}
+	if repo.items[11].Status != commonv1.PvzStatus_PVZ_STATUS_BLOCKED || repo.items[12].Status != commonv1.PvzStatus_PVZ_STATUS_BLOCKED {
+		t.Fatalf("owner pvz were not blocked: %+v %+v", repo.items[11], repo.items[12])
+	}
+	if repo.items[13].Status != commonv1.PvzStatus_PVZ_STATUS_APPROVED {
+		t.Fatalf("other owner's pvz mutated")
+	}
+}
+
 type fakeRepo struct {
 	items           map[int64]store.Pvz
 	nextID          int64
@@ -218,6 +249,30 @@ func (f *fakeRepo) ModeratePvzWithEvent(ctx context.Context, id int64, status co
 		f.approvedEvents++
 	}
 	return pvz, nil
+}
+
+func (f *fakeRepo) DeletePendingAndBlockOwnerPvz(ctx context.Context, ownerID int64, actorUserID int64, comment *string) (int64, int64, error) {
+	var deleted int64
+	var blocked int64
+	for id, pvz := range f.items {
+		if pvz.OwnerID != ownerID {
+			continue
+		}
+		if pvz.Status == commonv1.PvzStatus_PVZ_STATUS_PENDING {
+			delete(f.items, id)
+			deleted++
+			continue
+		}
+		if pvz.Status != commonv1.PvzStatus_PVZ_STATUS_BLOCKED {
+			pvz.Status = commonv1.PvzStatus_PVZ_STATUS_BLOCKED
+			pvz.ModeratedBy = &actorUserID
+			now := time.Now()
+			pvz.ModeratedAt = &now
+			f.items[id] = pvz
+			blocked++
+		}
+	}
+	return deleted, blocked, nil
 }
 
 type fakeChecker struct {

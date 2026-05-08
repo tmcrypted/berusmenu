@@ -37,6 +37,14 @@ type GetUserInput struct {
 	UserID        int64
 }
 
+type BlockUserInput struct {
+	ActorUserID  int64
+	ActorRole    commonv1.UserRole
+	UserID       int64
+	Reason       *string
+	BlockedUntil time.Time
+}
+
 type UpdateProfileInput struct {
 	UserID    int64
 	FullName  *string

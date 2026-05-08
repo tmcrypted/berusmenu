@@ -3,25 +3,30 @@ package inventory
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tmcrypted/berusmenu/api-gateway/internal/http/dto"
 	"github.com/tmcrypted/berusmenu/api-gateway/internal/http/response"
+	authv1 "github.com/tmcrypted/berusmenu/proto/gen/go/auth/v1"
 	inventoryv1 "github.com/tmcrypted/berusmenu/proto/gen/go/inventory/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Handler struct {
 	inventory inventoryv1.InventoryServiceClient
+	auth      authv1.AuthServiceClient
 }
 
 func RegisterRoutes(
 	group *gin.RouterGroup,
-	client inventoryv1.InventoryServiceClient,
+	inventoryClient inventoryv1.InventoryServiceClient,
+	authClient authv1.AuthServiceClient,
 	authMiddleware gin.HandlerFunc,
 	csrfMiddleware gin.HandlerFunc,
 	verifiedMiddleware gin.HandlerFunc,
 ) {
-	handler := Handler{inventory: client}
+	handler := Handler{inventory: inventoryClient, auth: authClient}
 
 	authorized := group.Group("", authMiddleware, verifiedMiddleware)
 	authorized.POST("/pvz", csrfMiddleware, handler.CreatePvz)
@@ -34,6 +39,7 @@ func RegisterRoutes(
 	moderation.POST("/pvz/:id/approve", csrfMiddleware, handler.ApprovePvz)
 	moderation.POST("/pvz/:id/reject", csrfMiddleware, handler.RejectPvz)
 	moderation.POST("/pvz/:id/block", csrfMiddleware, handler.BlockPvz)
+	moderation.POST("/users/:id/block-and-delete-pvz", csrfMiddleware, handler.BlockUserAndDeletePvz)
 }
 
 func (h Handler) CreatePvz(c *gin.Context) {
@@ -189,6 +195,43 @@ func (h Handler) BlockPvz(c *gin.Context) {
 		return
 	}
 	response.Proto(c, http.StatusOK, res.GetPvz())
+}
+
+func (h Handler) BlockUserAndDeletePvz(c *gin.Context) {
+	ownerID, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	var req dto.BlockUserAndDeletePvzRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	blockedUntil := time.Now().Add(time.Duration(req.BlockDurationMinutes) * time.Minute)
+
+	if _, err := h.auth.BlockUser(c.Request.Context(), &authv1.BlockUserRequest{
+		UserId:       ownerID,
+		Reason:       &req.Reason,
+		BlockedUntil: timestamppb.New(blockedUntil),
+	}); err != nil {
+		response.FromGRPCError(c, err)
+		return
+	}
+
+	res, err := h.inventory.DeleteOwnerPvzRequests(c.Request.Context(), &inventoryv1.DeleteOwnerPvzRequestsRequest{
+		OwnerId: ownerID,
+		Comment: req.Comment,
+	})
+	if err != nil {
+		response.FromGRPCError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"blocked_user_id": strconv.FormatInt(ownerID, 10),
+		"blocked_until":   blockedUntil.UTC().Format(time.RFC3339),
+		"deleted_count":   strconv.FormatInt(res.GetDeletedCount(), 10),
+		"blocked_count":   strconv.FormatInt(res.GetBlockedCount(), 10),
+	})
 }
 
 func bindJSON(c *gin.Context, dst any) bool {
