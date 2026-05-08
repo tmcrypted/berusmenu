@@ -1,14 +1,14 @@
-# Архитектура Berusmenu MVP
+# Architecture Berusmenu MVP
 
-## Цель
+## Goal
 
-Сделать простой и надежный MVP для срочного подбора работника на смену в ПВЗ, без лишней инфраструктурной сложности.
+Build a simple, production-oriented MVP for urgent PVZ shift staffing. The architecture favors clear ownership, boring infrastructure, and fast delivery over platform complexity.
 
-## High-level topology
+## High-Level Topology
 
 ```mermaid
 flowchart LR
-    FE["Frontend"] --> GW["API Gateway"]
+    FE["Frontend"] --> GW["api-gateway"]
     GW --> AUTH["auth-service"]
     GW --> INV["inventory-service"]
     GW --> MATCH["matching-service"]
@@ -29,132 +29,120 @@ flowchart LR
     NOTIF --> MAIL["Email sender"]
 ```
 
-## Основные решения
+`matching-service` and `communication-service` are planned services. Their contracts exist, but runtime implementation is future work.
 
-- Frontend ходит только в `api-gateway`.
-- Browser auth state is transported through HttpOnly cookies managed by `api-gateway`; frontend JavaScript does not store access or refresh tokens.
-- Frontend first-paint auth bootstrap happens on the Next.js server: request cookies are forwarded to read-only `GET /v1/auth/session`, then the resulting auth snapshot is used to hydrate client state before render.
-- Frontend registration is intentionally minimal (`email + password + role`); profile details are completed after email verification.
-- Gateway enforces CSRF for authenticated unsafe HTTP methods and forwards verified identity downstream through gRPC metadata, not cookies.
-- Gateway общается с backend services по gRPC.
-- Gateway остается тонким; cross-domain business checks выполняются синхронно в owning services.
-- Все core business transactions синхронны.
-- Kafka используется только для async notification events.
-- `notification-service` отделен от доменных сервисов.
-- Redis используется для verification/rate limiting/presence.
-- Postgres один, но со схемой на сервис.
+## Decisions
 
-## Схемы в Postgres
+- Frontend talks only to `api-gateway`.
+- Browser auth uses HttpOnly cookies.
+- Frontend never stores access/refresh tokens in JavaScript.
+- First-paint frontend auth bootstrap uses `GET /v1/auth/session`.
+- Registration is minimal: `email + password + role`.
+- Profile completion happens after email verification.
+- Gateway enforces CSRF for authenticated unsafe methods.
+- Gateway forwards identity to backend services through gRPC metadata.
+- Backend services talk over gRPC.
+- Gateway stays thin; business rules live in owning services.
+- Core business transactions are synchronous.
+- Kafka is used only for notification events in MVP.
+- Redis is used for verification/rate limiting/realtime ephemeral state.
+- One Postgres database, separate schema per service.
+
+## Schemas
 
 - `auth`
 - `inventory`
-- `matching`
-- `communication`
+- `matching` planned
+- `communication` planned
 
-`notification-service` в MVP без своей схемы и без собственной БД.
+`notification-service` has no own schema in MVP.
 
 ## Boundaries
 
 ### Auth
 
-- user identity
-- account credentials
-- JWT issuance and validation
-- email verification
-- refresh session lifecycle
+- account identity;
+- credentials;
+- JWT issuance and validation;
+- email verification;
+- refresh sessions;
+- profile;
+- timed user blocks.
 
 ### Inventory
 
-- PVZ registration
-- PVZ moderation
-- PVZ updates and repeated moderation
-- owner spam cleanup: timed auth block plus inventory-owned PVZ cleanup
+- PVZ registration;
+- PVZ moderation;
+- PVZ updates and repeated moderation;
+- moderation history;
+- owner spam cleanup for PVZ requests.
 
 ### Matching
 
-- vacancy lifecycle
-- response lifecycle
-- assignment lifecycle
-- reviews
-- review replies
+- vacancy lifecycle;
+- response lifecycle;
+- assignment lifecycle;
+- active vacancy truth;
+- reviews and review replies.
 
 ### Communication
 
-- conversations
-- messages
-- message_reads
-- websocket-backed realtime chat
+- conversations;
+- messages;
+- read state;
+- realtime chat semantics.
 
 ### Notification
 
-- Kafka consumer
-- event handlers
-- email sender
-- log/stub sender for local development
-- Mailganer integration later
+- Kafka consumer;
+- event handlers;
+- email sender abstraction;
+- local log/stub sender.
 
 ## Sync vs Async
 
-### Синхронно
+Synchronous:
 
-- register user
-- verify email
-- create PVZ
-- approve/reject PVZ
-- update PVZ -> pending
-- create vacancy
-- create response
-- create conversation
-- accept response -> assignment
-- cancel/complete assignment
-- create review
-- create review reply
+- register/login/refresh/logout;
+- verify email;
+- create/update/moderate PVZ;
+- future vacancy/response/assignment/review flows.
 
-### Асинхронно
+Asynchronous:
 
-- send verification email
-- notify owner about new response
+- send verification email;
+- notify owner about new response.
 
 ## Data Ownership
 
-- каждый сервис владеет только своей схемой
-- cross-schema FK не используются
-- идентификаторы из других доменов хранятся как ссылки по id
-- валидация междоменной целостности происходит в owning service
+- Each service owns only its schema.
+- No cross-schema FK.
+- Cross-domain ids are stored as plain ids.
+- Cross-domain validation happens through owning service RPCs.
+- No service writes another service schema.
 
 ## Runtime Roles
 
 ### `api-gateway`
 
-- HTTP entrypoint
-- auth cookie middleware
-- CSRF, CORS and security headers
-- gRPC fan-out
-- websocket edge
+- HTTP entrypoint;
+- auth cookie middleware;
+- CSRF/CORS/security headers;
+- REST -> gRPC mapping;
+- future websocket edge.
 
 ### `notification-service`
 
-- не имеет публичного API
-- работает как background worker
-- читает Kafka и передает notification в email sender abstraction
+- no public API;
+- background worker;
+- consumes Kafka;
+- dispatches email notifications.
 
-## External integrations
+## External Integrations
 
-- Mailganer planned as production email provider
-- Nginx + SSL на `berusmenu.ru`
+- Production email provider is planned.
+- Nginx + SSL planned for production edge.
 
-## Why this architecture
+## Trade-Off
 
-Плюсы:
-
-- быстрый старт
-- понятные границы
-- низкая операционная сложность
-- легко отдельно развивать notification pipeline later
-
-Минусы:
-
-- меньше изоляции, чем при отдельных БД на сервис
-- часть кросс-доменных правил контролируется только кодом
-
-Для MVP это приемлемый trade-off.
+One database with schemas gives less physical isolation than separate databases, but keeps MVP operations simple. Service boundaries are enforced through code, ownership rules, and no cross-schema writes.

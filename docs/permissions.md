@@ -72,7 +72,12 @@ Allowed:
 - `POST /v1/auth/logout`
 - `POST /v1/auth/resend-code`
 - `POST /v1/auth/verify-email`
-- `GET /v1/me` is forbidden until email verification succeeds
+- `GET /v1/auth/session`
+
+Forbidden until email verification succeeds:
+
+- `GET /v1/me`
+- `PATCH /v1/me`
 
 Denied:
 

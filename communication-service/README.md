@@ -1,15 +1,18 @@
 # communication-service
 
-Сервис чатов и переписки по response flow.
+`communication-service` is the planned chat service for the response/assignment flow.
 
-## Ответственность
+It is not implemented as a runnable backend service yet. Its boundaries and protobuf contracts already exist.
 
-- create conversation for response
-- store messages
-- track message reads
-- support realtime delivery semantics
+## Responsibility
 
-## Owned schema
+- create conversation for response;
+- store messages;
+- track message reads;
+- own chat permissions and read state;
+- support realtime delivery semantics with gateway/websocket edge.
+
+## Planned Owned Schema
 
 Schema: `communication`
 
@@ -19,24 +22,26 @@ Tables:
 - `communication.messages`
 - `communication.message_reads`
 
-## Важные правила
+## Rules
 
-- conversation создается сразу после response
-- conversation is unique per response
-- only owner and worker of conversation can read and write
-- chat becomes read-only after assignment finalization
-- message writes check response chat writability through `matching-service`
+- Conversation is created immediately after response.
+- Conversation is unique per response.
+- Only owner and worker from the conversation can read/write.
+- Chat becomes read-only after `assignment.completed` or `assignment.cancelled`.
+- Message writes must check response chat writability through `matching-service`.
 
 ## Integrations
 
-- PostgreSQL
-- Redis for presence/typing/active connection state
-- gRPC calls to `matching-service` for chat writability
-- websocket traffic through gateway
+- PostgreSQL for conversations/messages/read state.
+- Redis for presence, typing and active websocket state.
+- `matching-service.CheckResponseChatWritable` for write permission.
+- `api-gateway` websocket edge for public traffic.
 
-## Next implementation steps
+## Next Steps
 
-1. conversation creation
-2. message persistence
-3. read markers
-4. websocket delivery
+1. Add module/runtime structure following existing service pattern.
+2. Add migrations.
+3. Implement `CreateConversationForResponse`.
+4. Implement message persistence and listing.
+5. Implement read markers.
+6. Implement realtime delivery path.

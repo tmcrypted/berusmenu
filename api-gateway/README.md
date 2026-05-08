@@ -1,47 +1,53 @@
 # API Gateway
 
-REST/JSON BFF для Berusmenu.
+`api-gateway` is the public HTTP entrypoint for Berusmenu.
 
-Gateway принимает запросы от frontend, валидирует auth context и маршрутизирует операции во внутренние gRPC сервисы.
+It owns:
 
-## Ответственность
+- public REST shape;
+- HttpOnly cookie auth transport;
+- CSRF checks for authenticated unsafe methods;
+- credentialed CORS for the frontend origin;
+- verified-user gate;
+- REST -> gRPC mapping;
+- gRPC identity metadata forwarding.
 
-- public HTTP API
-- HttpOnly cookie auth middleware
-- CSRF validation for authenticated unsafe methods
-- credentialed CORS for configured frontend origins
-- restriction logic for unverified users
-- REST -> gRPC mapping
-- websocket edge for chat
+Business rules stay in owning services.
 
-## Current scope
+## Current Scope
 
-- health endpoints
-- auth endpoints
-- current user profile
-- inventory PVZ and moderation REST -> gRPC routes
-- skeleton route groups for matching and communication
-- gRPC clients to downstream services
+Implemented:
 
-## Endpoints
+- health endpoints;
+- auth endpoints;
+- session bootstrap endpoint;
+- current profile endpoints;
+- inventory owner routes;
+- PVZ moderation routes;
+- moderator owner spam cleanup route;
+- placeholder route groups for future matching and communication flows;
+- gRPC clients to downstream services.
 
-### Health
+## HTTP Routes
+
+Health:
 
 - `GET /health/live`
 - `GET /health/ready`
 
-### Auth
+Auth/profile:
 
 - `POST /v1/auth/register`
 - `POST /v1/auth/login`
 - `POST /v1/auth/refresh`
+- `GET /v1/auth/session`
 - `POST /v1/auth/logout`
 - `POST /v1/auth/resend-code`
 - `POST /v1/auth/verify-email`
 - `GET /v1/me`
 - `PATCH /v1/me`
 
-### Inventory
+Inventory:
 
 - `POST /v1/pvz`
 - `GET /v1/pvz`
@@ -51,34 +57,40 @@ Gateway принимает запросы от frontend, валидирует au
 - `POST /v1/moderation/pvz/{id}/approve`
 - `POST /v1/moderation/pvz/{id}/reject`
 - `POST /v1/moderation/pvz/{id}/block`
+- `POST /v1/moderation/users/{id}/block-and-delete-pvz`
 
-## Unverified user policy
-
-JWT can already exist before email verification.
-
-Gateway must allow only whitelist endpoints for unverified users:
-
-- logout
-- resend verification code
-- verify email
-- `me` is not available for unverified users
-
-## Web auth transport
+## Web Auth Transport
 
 The public web API does not use `Authorization: Bearer`.
 
 - `berusmenu_access`: HttpOnly access JWT cookie.
 - `berusmenu_refresh`: HttpOnly refresh token cookie scoped to auth routes.
 - `berusmenu_csrf`: readable CSRF cookie.
-- `X-CSRF-Token`: must match `berusmenu_csrf` for authenticated `POST`, `PATCH`, `PUT`, and `DELETE`.
+- `X-CSRF-Token`: required for authenticated `POST`, `PATCH`, `PUT`, `DELETE`.
 
-Gateway validates the access cookie through `auth-service` and forwards identity downstream as gRPC metadata.
+Gateway validates the access cookie through `auth-service` and forwards identity downstream as gRPC metadata:
 
-The Insomnia collection uses the built-in Cookie template tag for CSRF:
+- `x-user-id`
+- `x-user-role`
+- `x-user-email`
+- `x-user-email-verified`
 
-```text
-{% cookie _.base_url, 'berusmenu_csrf' %}
-```
+## Unverified User Policy
+
+JWT may exist before email verification.
+
+Allowed while unverified:
+
+- logout;
+- resend verification code;
+- verify email;
+- read-only session bootstrap.
+
+Verified-only:
+
+- `GET /v1/me`;
+- `PATCH /v1/me`;
+- all inventory/matching/communication domain routes.
 
 ## Env
 
@@ -100,27 +112,26 @@ The Insomnia collection uses the built-in Cookie template tag for CSRF:
 | `CSRF_HEADER_NAME` | `X-CSRF-Token` |
 | `REFRESH_COOKIE_TTL` | `720h` |
 
-## Local run
+## Local Run
 
-```bash
-go run ./cmd/api-gateway
+From service root:
+
+```powershell
+cd C:\Users\tmcrypted\Desktop\berusmenu\api-gateway
+$env:AUTH_GRPC_ADDR="localhost:50051"
+$env:INVENTORY_GRPC_ADDR="localhost:50052"
+go run .\cmd\api-gateway
 ```
 
 ## Tests
 
-```bash
+```powershell
 go test ./...
 ```
 
-## API documentation
+## API Documentation
 
 - HTTP API reference: [`docs/http-api.md`](docs/http-api.md)
 - Insomnia import collection: [`insomnia/berusmenu-api.json`](insomnia/berusmenu-api.json)
 
 Every HTTP API behavior change must update both files together with the code.
-
-## Notes
-
-- `github.com/tmcrypted/berusmenu/proto` is resolved locally through `replace => ../proto`
-- gateway forwards identity through gRPC metadata
-- gateway should stay thin; domain rules stay in owning services

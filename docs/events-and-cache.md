@@ -89,6 +89,8 @@ Expected categories:
 - verify email
 - send message
 
+Current implemented Redis usage is email verification. Rate limiting and realtime state are reserved for the following service slices.
+
 ### Presence / realtime state
 
 - online/offline presence

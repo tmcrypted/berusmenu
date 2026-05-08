@@ -16,7 +16,7 @@ sequenceDiagram
 
     U->>FE: Submit registration form
     FE->>GW: POST /v1/auth/register
-    GW->>AU: Register(email, password, full_name, role)
+    GW->>AU: Register(email, password, role)
     AU->>PG: Check email uniqueness
     PG-->>AU: Email is free
     AU->>PG: Create user
@@ -136,7 +136,7 @@ sequenceDiagram
     participant PG as PostgreSQL
 
     Mod->>FE: Approve or reject PVZ
-    FE->>GW: POST /v1/moderation/pvz/{id}/decision
+    FE->>GW: POST /v1/moderation/pvz/{id}/approve or /reject
     GW->>INV: ApprovePvz or RejectPvz
     INV->>PG: Update pvz status
     INV->>PG: Insert moderation event
@@ -162,7 +162,7 @@ sequenceDiagram
     MATCH-->>INV: active vacancy flag
     alt active vacancy exists
         INV-->>GW: reject update
-        GW-->>FE: 409 Conflict
+        GW-->>FE: 412 Failed Precondition or 503 Unavailable
     else no active vacancy
         INV->>PG: Update PVZ data and set status pending
         INV->>PG: Insert moderation event submitted
@@ -190,6 +190,31 @@ sequenceDiagram
     MATCH->>PG: Insert matching.vacancies
     MATCH-->>GW: vacancy created
     GW-->>FE: 201 Created
+```
+
+## 8a. Moderator spam cleanup for owner
+
+```mermaid
+sequenceDiagram
+    participant Mod as Moderator
+    participant FE as Frontend
+    participant GW as API Gateway
+    participant AU as Auth Service
+    participant INV as Inventory Service
+    participant APG as auth.users
+    participant IPG as inventory.pvz
+
+    Mod->>FE: Block spam owner for N minutes
+    FE->>GW: POST /v1/moderation/users/{owner_id}/block-and-delete-pvz
+    GW->>AU: BlockUser(owner_id, blocked_until, reason)
+    AU->>APG: status=blocked, blocked_until=now+N
+    AU-->>GW: user blocked
+    GW->>INV: DeleteOwnerPvzRequests(owner_id, comment)
+    INV->>IPG: Delete pending owner PVZ rows
+    INV->>IPG: Set remaining owner PVZ to blocked
+    INV->>IPG: Insert blocked moderation events
+    INV-->>GW: deleted_count, blocked_count
+    GW-->>FE: 200 OK
 ```
 
 ## 9. Create response + create conversation + notify owner

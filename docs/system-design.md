@@ -1,8 +1,6 @@
 # System Design Berusmenu MVP
 
-## Документ
-
-Этот документ фиксирует итоговый design baseline для MVP. Подробности вынесены в специализированные разделы:
+This document is the current design baseline. More detailed slices live in:
 
 - [Sequence Diagrams](sequence-diagrams.md)
 - [State Transitions](state-transitions.md)
@@ -14,24 +12,42 @@
 
 ## Product Goal
 
-Дать владельцу ПВЗ возможность быстро закрыть смену и выбрать исполнителя на конкретную дату, а worker — быстро откликнуться, договориться в чате и получить assignment.
+Help a PVZ owner quickly publish an urgent shift, receive worker responses, choose an assignee, chat, complete/cancel the assignment and collect reviews. MVP optimizes for a short vacancy-to-assignment path and simple operations.
 
-## Must-have scope
+## Current Implementation Status
 
-- регистрация и логин по email/password
-- HttpOnly cookie based web auth with CSRF protection
-- email verification code
-- PVZ registration and moderation
-- vacancy creation
-- worker response
-- chat inside response flow
-- assignment selection
-- assignment cancellation/completion
-- reviews
-- review replies
-- email notifications:
-  - verification code
-  - new response notification to owner
+Implemented:
+
+- auth backend;
+- notification worker;
+- inventory backend;
+- auth/profile frontend;
+- owner PVZ frontend;
+- moderator PVZ frontend;
+- gateway routes for auth/profile/inventory.
+
+Planned:
+
+- matching backend/frontend;
+- communication backend/frontend;
+- reviews UI;
+- production email provider.
+
+## Must-Have Scope
+
+- email/password auth;
+- HttpOnly cookie web auth with CSRF;
+- email verification code;
+- profile completion after verification;
+- PVZ registration and moderation;
+- moderator timed spam block for abusive owners;
+- vacancy creation;
+- worker response;
+- chat inside response flow;
+- assignment selection;
+- assignment cancellation/completion;
+- reviews and review replies;
+- email notifications for verification and new response.
 
 ## Core Components
 
@@ -45,7 +61,6 @@
 - `postgres`
 - `redis`
 - `kafka`
-- email sender abstraction
 
 ## Persisted Data
 
@@ -54,12 +69,16 @@
 - `users`
 - `refresh_sessions`
 
+`users.blocked_until` supports temporary moderator blocks.
+
 ### `inventory`
 
 - `pvz`
 - `pvz_moderation_events`
 
 ### `matching`
+
+Planned:
 
 - `vacancies`
 - `responses`
@@ -69,42 +88,34 @@
 
 ### `communication`
 
+Planned:
+
 - `conversations`
 - `messages`
 - `message_reads`
 
 ## Core Rules
 
-- one worker response per vacancy
-- conversation is created immediately after response
-- repeat response after `withdrawn` is forbidden
-- old vacancy is not reused after `assignment.cancelled`
-- reviews are allowed after `completed` or `cancelled`
-- replies belong only to root reviews and have one nesting level only
-- chat is read-only after assignment finalization
-- PVZ updates directly mutate `inventory.pvz`, set PVZ back to `pending`, and require repeated moderation
-- PVZ update is forbidden when there are active vacancy with statuses `published` and `assigned`
-- new vacancy cannot be created while PVZ is not `approved`
-- moderator spam cleanup blocks the owner until `auth.users.blocked_until`, deletes pending owner PVZ requests, and sets remaining owner PVZ to `blocked`
-- Gateway stays thin; cross-domain business checks are synchronous RPCs owned by domain services
-
-## Auth Rules
-
-- user gets an access JWT and refresh token after registration, but gateway stores both in HttpOnly cookies for web clients
-- frontend stores user/session state only, not raw tokens
-- email may still be unverified
-- unverified users can access only whitelist endpoints
-- authenticated unsafe HTTP methods require `X-CSRF-Token` matching the readable CSRF cookie
-- verification code is stored in Redis
-- resend returns the same code while it is alive
-- resend cooldown 60 seconds
-- 3 failed verify attempts produce 1 hour lockout
-- refresh sessions are revoked in Postgres by setting `auth.refresh_sessions.revoked_at`; only token hashes are persisted
-- refresh rotation is atomic: revoke old session and insert new session in one transaction
+- One database, separate schema per service.
+- FK only inside a service schema.
+- Cross-domain integrity is validated through owning services.
+- Gateway stays thin.
+- User receives JWT after registration, but verified-only flows are blocked until email verification.
+- Auth tokens are stored in HttpOnly cookies for web clients.
+- PVZ update mutates `inventory.pvz`, sets it back to `pending`, and requires repeated moderation.
+- PVZ update is forbidden when active vacancy exists with status `published` or `assigned`.
+- New vacancy cannot be created while PVZ is not `approved`.
+- Moderator spam cleanup temporarily blocks owner in `auth-service`, deletes pending owner PVZ requests, and sets remaining owner PVZ to `blocked`.
+- Conversation is created immediately after response.
+- Repeat response after `withdrawn` is forbidden.
+- Old vacancy is not reused after `assignment.cancelled`.
+- Reviews are allowed after `completed` or `cancelled`.
+- Replies belong only to root reviews and have one nesting level.
+- Chat is read-only after assignment finalization.
 
 ## Async Rules
 
-Kafka is used only for:
+Kafka is used only for notification events:
 
 - `auth.email_verification_requested`
 - `matching.response_created`
@@ -113,33 +124,17 @@ Consumer:
 
 - `notification-service`
 
-Delivery channel in MVP:
+Delivery:
 
-- email only
-- local development uses log/stub sender
-- Mailganer is planned as production provider
+- email only in MVP;
+- local log/stub sender now;
+- production provider later.
 
-## Non-goals
+## Non-Goals
 
-- payments
-- telegram/max notifications now
-- advanced analytics
-- tracing stack
-- recommendation engine
-
-## Implementation Status
-
-System design is frozen enough for current auth/notification foundation. Next implementation focus:
-
-1. inventory, matching and communication service implementation
-2. api-gateway REST -> gRPC mapping for domain services
-3. frontend flows
-4. integration tests
-
-## Frontend Auth Addendum
-
-- registration can start with only `email + password + role`
-- email verification remains mandatory before `GET /v1/me` and other verified-only flows
-- after verification, frontend uses `GET /v1/me` to decide whether profile completion is still required
-- profile completion is role-specific for `worker` and `owner`
-- the first frontend slice is responsive for mobile, tablet, and desktop and supports manual light/dark theme switching
+- payments;
+- advanced analytics;
+- recommendation engine;
+- CQRS/event sourcing;
+- multi-channel notifications beyond email;
+- full observability stack before core flows are stable.

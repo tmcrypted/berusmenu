@@ -1,62 +1,72 @@
 # notification-service
 
-Background worker for Berusmenu notification delivery.
+`notification-service` is a background worker for notification delivery.
 
-## Ответственность
+It has no public HTTP/gRPC API and no PostgreSQL schema in MVP.
 
-- consume Kafka notification events
-- dispatch email notifications
-- provide an email sender abstraction
-- log delivery success and failure
+## Responsibility
 
-## Storage
+- consume Kafka notification events;
+- decode protobuf event payloads;
+- dispatch email notifications;
+- provide email sender abstraction;
+- log delivery success/failure.
 
-In MVP this service has no own PostgreSQL schema and no own DB.
-
-## Consumed events
+## Consumed Events
 
 - `auth.email_verification_requested`
 - `matching.response_created`
 
-## Kafka processing policy
+## Kafka Processing Policy
 
 - Commit offsets only after successful handling.
-- Malformed protobuf and semantically invalid notification events are logged and committed to avoid blocking a partition forever.
-- Transient sender failures are retried with bounded backoff; if retries are exhausted, the offset is not committed.
+- Malformed protobuf and semantically invalid messages are logged and committed so a partition is not blocked forever.
+- Transient sender failures are retried with bounded backoff.
+- If retries are exhausted, the offset is not committed.
 
-## Delivery channel
+## Delivery Channel
 
-MVP channel:
+MVP:
 
-- email only
-- local development uses a log/stub sender
+- email only;
+- local development uses log/stub sender.
 
-Planned production provider:
+Planned:
 
-- Mailganer
+- production email provider;
+- optional Telegram/Max later.
 
-Later extensions:
+## Internal Structure
 
-- Telegram
-- Max
+- `internal/consumer` - Kafka fetch/unmarshal/commit transport.
+- `internal/service` - notification handling and email sender abstraction.
+- `internal/dto` - service-level notification models.
+- `internal/config` - env parsing.
 
-## Components
+## Local Run
 
-- Kafka consumer
-- event handlers
-- email sender
-- configuration
-- external logging
+From service root:
 
-## Internal structure
+```powershell
+cd C:\Users\tmcrypted\Desktop\berusmenu\notification-service
+$env:KAFKA_BROKERS="localhost:19092"
+go run .\cmd\notification-service
+```
 
-- `internal/consumer` owns Kafka transport: fetch, protobuf unmarshal, commit, and service dispatch.
-- `internal/service` owns notification handling and the email stub sender abstraction for verification and response-created emails.
-- `internal/dto` contains service-level notification models.
-- Service behavior is covered by table-driven unit tests with gomock mocks.
+Inside compose use:
 
-## Next implementation steps
+```text
+KAFKA_BROKERS=kafka:9092
+```
 
-1. Mailganer email sender
-2. handler for `matching.response_created`
-3. delivery logs
+## Tests
+
+```powershell
+go test ./...
+```
+
+## Next Steps
+
+1. Production email sender.
+2. Delivery logging/metrics.
+3. Real `matching.response_created` producer integration after matching-service is implemented.

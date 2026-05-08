@@ -1,15 +1,15 @@
 # proto
 
-Директория общих protobuf contracts для backend-сервисов Berusmenu в рамках монорепозитория.
+Shared protobuf contracts for Berusmenu backend services.
 
-## Ответственность
+## Responsibility
 
-- gRPC service definitions
-- message contracts
-- shared enums
-- schema-first event payloads для Kafka notification events
+- gRPC service definitions;
+- message contracts;
+- shared enums;
+- schema-first Kafka event payloads.
 
-## Текущее покрытие
+## Packages
 
 - `auth.v1`
 - `inventory.v1`
@@ -18,23 +18,35 @@
 - `events.v1`
 - `common.v1`
 
-## Важные правила
+## Current Notes
 
-- contracts уже выровнены под модель `vacancy/response/assignment/conversation/review_reply`
-- старая vocabulary `listing/application/deal` больше не используется
-- gateway сериализует protobuf ответы в snake_case proto field names
-- event payloads описываются здесь, но не становятся частью public runtime API
+- `auth.v1.AuthService` includes `BlockUser` for timed moderator blocks.
+- `inventory.v1.InventoryService` includes `DeleteOwnerPvzRequests` for moderator spam cleanup.
+- Gateway serializes protobuf HTTP responses using proto field names in snake_case.
+- Kafka event payloads are described here, but they are not public HTTP API.
+- Old vocabulary such as `listing/application/deal` is not used; current domain language is `vacancy/response/assignment`.
 
-## Kafka payload contracts
+## Kafka Payload Contracts
 
 - `berusmenu.events.v1.EmailVerificationRequested`
 - `berusmenu.events.v1.ResponseCreated`
 
 ## Tooling
 
-- source files: `proto/**`
-- generated Go stubs: `gen/go/**`
+Source files:
 
-```bash
+```text
+proto/**
+```
+
+Generated Go stubs:
+
+```text
+gen/go/**
+```
+
+Regenerate:
+
+```powershell
 buf generate
 ```
