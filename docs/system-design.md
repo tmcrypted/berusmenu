@@ -134,3 +134,11 @@ System design is frozen enough for current auth/notification foundation. Next im
 2. api-gateway REST -> gRPC mapping for domain services
 3. frontend flows
 4. integration tests
+
+## Frontend Auth Addendum
+
+- registration can start with only `email + password + role`
+- email verification remains mandatory before `GET /v1/me` and other verified-only flows
+- after verification, frontend uses `GET /v1/me` to decide whether profile completion is still required
+- profile completion is role-specific for `worker` and `owner`
+- the first frontend slice is responsive for mobile, tablet, and desktop and supports manual light/dark theme switching

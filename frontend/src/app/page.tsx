@@ -1,24 +1,51 @@
-import { ShiftList } from "@/components/ShiftList";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useResolvedAuthSnapshot } from "@/components/auth/AuthStoreHydrator";
+import {
+  GuestHomeContent,
+  OwnerHomeContent,
+  WorkerHomeContent,
+} from "@/components/home/HomePanels";
+import { profileCompletionPath } from "@/lib/profile";
 
 export default function Home() {
-  return (
-    <div className="min-h-[calc(100vh-3.5rem)] bg-[var(--background)]">
-      <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-        <div className="mb-8 max-w-2xl">
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)] sm:text-3xl">
-            Смены на сегодня и завтра
-          </h1>
-          <p className="mt-2 text-base leading-relaxed text-[var(--muted)] sm:text-lg">
-            Заглушка: здесь будут реальные объявления от владельцев ПВЗ. Пока —
-            демо-карточки.
-          </p>
-        </div>
-        <ShiftList />
-      </section>
+  const router = useRouter();
+  const { status, user } = useResolvedAuthSnapshot();
 
-      <footer className="border-t border-[var(--border)] py-6 text-center text-sm text-[var(--muted)]">
-        © {new Date().getFullYear()} Беру Смену · berusmenu.ru
-      </footer>
+  useEffect(() => {
+    if (status === "authenticated_unverified") {
+      router.replace("/verify-email");
+      return;
+    }
+
+    if (status === "authenticated_profile_incomplete" && user) {
+      router.replace(profileCompletionPath(user.role));
+    }
+  }, [router, status, user]);
+
+  const readyOwner = status === "authenticated_ready" && user?.role === "owner";
+  const readyWorker =
+    status === "authenticated_ready" && user && user.role !== "owner";
+  const isBootstrapping = status === "loading";
+
+  return (
+    <div className="app-shell">
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        {isBootstrapping ? (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
+            <div className="min-h-[18rem] rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] shadow-[var(--shadow-soft)]" />
+            <div className="min-h-[18rem] rounded-[2rem] border border-[var(--border)] bg-[var(--card)] shadow-[var(--shadow-soft)]" />
+          </div>
+        ) : readyOwner && user ? (
+          <OwnerHomeContent user={user} />
+        ) : readyWorker && user ? (
+          <WorkerHomeContent user={user} />
+        ) : (
+          <GuestHomeContent status={status} user={user} />
+        )}
+      </section>
     </div>
   );
 }

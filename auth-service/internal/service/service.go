@@ -66,8 +66,8 @@ func New(cfg config.Config, users UserRepository, verification VerificationStore
 
 func (s *Service) Register(ctx context.Context, input dto.RegisterInput) (dto.AuthPayload, error) {
 	email := store.NormalizeEmail(input.Email)
-	if email == "" || input.Password == "" || strings.TrimSpace(input.FullName) == "" {
-		return dto.AuthPayload{}, serviceError(ErrInvalidArgument, "email, password and full_name are required")
+	if email == "" || input.Password == "" {
+		return dto.AuthPayload{}, serviceError(ErrInvalidArgument, "email and password are required")
 	}
 	if len(input.Password) < 8 {
 		return dto.AuthPayload{}, serviceError(ErrInvalidArgument, "password must be at least 8 characters")

@@ -41,6 +41,7 @@ func RegisterRoutes(
 	group.POST("/auth/register", handler.Register)
 	group.POST("/auth/login", handler.Login)
 	group.POST("/auth/refresh", handler.Refresh)
+	group.GET("/auth/session", authMiddleware, handler.GetSession)
 	group.POST("/auth/logout", csrfMiddleware, handler.Logout)
 	group.POST("/auth/resend-code", authMiddleware, csrfMiddleware, handler.ResendVerificationCode)
 	group.POST("/auth/verify-email", authMiddleware, csrfMiddleware, handler.VerifyEmail)
@@ -155,6 +156,24 @@ func (h Handler) VerifyEmail(c *gin.Context) {
 	}
 
 	writeProto(c, http.StatusOK, res)
+}
+
+func (h Handler) GetSession(c *gin.Context) {
+	user, ok := middleware.GetCurrentUser(c)
+	if !ok {
+		response.Error(c, http.StatusUnauthorized, "unauthenticated", "missing authenticated user")
+		return
+	}
+
+	res, err := h.auth.GetUser(c.Request.Context(), &authv1.GetUserRequest{
+		UserId: user.ID,
+	})
+	if err != nil {
+		response.FromGRPCError(c, err)
+		return
+	}
+
+	writeProto(c, http.StatusOK, res.GetUser())
 }
 
 func (h Handler) GetMe(c *gin.Context) {

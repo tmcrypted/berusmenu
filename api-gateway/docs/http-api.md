@@ -34,6 +34,7 @@ The maintained Insomnia collection reads this value from the cookie jar with:
 
 Most business endpoints also require verified email. The gateway allows unverified authenticated users only for:
 
+- `GET /v1/auth/session`
 - `POST /v1/auth/logout`
 - `POST /v1/auth/resend-code`
 - `POST /v1/auth/verify-email`
@@ -103,9 +104,7 @@ Request:
 {
   "email": "worker@example.com",
   "password": "password123",
-  "full_name": "Worker User",
-  "role": "worker",
-  "phone": "+79990001122"
+  "role": "worker"
 }
 ```
 
@@ -113,9 +112,9 @@ Fields:
 
 - `email`: required, email.
 - `password`: required, minimum 8 chars.
-- `full_name`: required.
+- `full_name`: optional. Frontend MVP collects it after email verification during profile completion.
 - `role`: optional, one of `worker`, `owner`, `moderator`; defaults to `worker`.
-- `phone`: optional.
+- `phone`: optional. Frontend MVP collects it after email verification during profile completion.
 
 Success `201`:
 
@@ -171,6 +170,31 @@ Request: no body required.
 Success `200`: same shape as register success.
 
 Possible errors: `400`, `401`, `403`.
+
+### `GET /v1/auth/session`
+
+Returns the currently authenticated user from the access cookie without rotating refresh cookies.
+
+Auth: access cookie required. Allowed before email verification.
+
+Success `200`:
+
+```json
+{
+  "id": "7",
+  "email": "worker@example.com",
+  "role": "USER_ROLE_WORKER",
+  "full_name": "Worker User",
+  "created_at": "2026-05-06T13:00:00Z",
+  "updated_at": "2026-05-06T13:00:00Z"
+}
+```
+
+If the user is already verified, the response also includes `email_verified_at`.
+
+Frontend note: Next.js uses this read-only endpoint for server-side first-paint auth bootstrap so the header and guarded routes render from the correct auth state without rotating refresh tokens.
+
+Possible errors: `401`, `404`.
 
 ### `POST /v1/auth/logout`
 
@@ -253,6 +277,8 @@ Returns the authenticated user's profile.
 
 Auth: access cookie required. Requires verified email.
 
+Frontend note: after successful email verification, `GET /v1/me` is used to decide whether the user is already profile-complete or should be redirected to a role-specific completion screen.
+
 Success `200`:
 
 ```json
@@ -286,6 +312,8 @@ Request:
 ```
 
 All fields are optional. Omitted fields are unchanged.
+
+Frontend note: for the current MVP, `PATCH /v1/me` is the primary endpoint for post-verify profile completion.
 
 Success `200`: same shape as `GET /v1/me`.
 

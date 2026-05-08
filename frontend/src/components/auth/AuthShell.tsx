@@ -9,23 +9,22 @@ type AuthShellProps = {
 
 export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-[var(--background)] px-4 py-10 sm:px-6">
-      <div className="w-full max-w-md">
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-sm sm:p-8">
-          <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)] sm:text-2xl">
+    <div className="relative isolate flex min-h-[calc(100vh_-_var(--header-height))] w-full overflow-hidden px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <div className="absolute inset-0 -z-10 bg-[var(--background)]" />
+      <div className="mx-auto flex w-full max-w-xl flex-col justify-center">
+        <div className="w-full rounded-[2rem] border border-[var(--border)] bg-[color-mix(in_srgb,var(--card)_94%,transparent)] p-6 shadow-[var(--shadow-soft)] backdrop-blur-sm sm:p-8">
+          <h2 className="text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-3xl">
             {title}
-          </h1>
+          </h2>
           {subtitle ? (
-            <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+            <p className="mt-3 text-sm leading-7 text-[var(--muted)] sm:text-base">
               {subtitle}
             </p>
           ) : null}
-          <div className="mt-6">{children}</div>
+          <div className="mt-8">{children}</div>
         </div>
         {footer ? (
-          <div className="mt-6 text-center text-sm text-[var(--muted)]">
-            {footer}
-          </div>
+          <div className="mt-6 text-center text-sm text-[var(--muted)]">{footer}</div>
         ) : null}
       </div>
     </div>
