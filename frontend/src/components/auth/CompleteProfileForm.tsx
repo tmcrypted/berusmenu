@@ -37,7 +37,8 @@ const schema = z.object({
     }),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormInput = z.input<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 type Props = {
   role: UserRole;
@@ -53,7 +54,7 @@ export function CompleteProfileForm({ role }: Props) {
     reset,
     formState: { errors, isSubmitting },
     setError,
-  } = useForm<FormValues>({
+  } = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       full_name: "",
