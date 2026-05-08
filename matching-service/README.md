@@ -1,16 +1,20 @@
 # matching-service
 
-Сервис core marketplace flow для Berusmenu.
+`matching-service` is the planned owner/worker marketplace service.
 
-## Ответственность
+It is not implemented as a runnable backend service yet. Its protobuf contracts and architecture rules already exist so the inventory/auth work can integrate against stable boundaries.
 
-- vacancy lifecycle
-- response lifecycle
-- assignment lifecycle
-- reviews
-- review replies
+## Responsibility
 
-## Owned schema
+- vacancy lifecycle;
+- response lifecycle;
+- assignment lifecycle;
+- reviews;
+- review replies;
+- active vacancy truth for PVZ update checks;
+- response chat writability checks.
+
+## Planned Owned Schema
 
 Schema: `matching`
 
@@ -22,40 +26,49 @@ Tables:
 - `matching.reviews`
 - `matching.review_replies`
 
-## Важные правила
+## Rules
 
-- repeat response after `withdrawn` is forbidden
-- vacancy creation validates approved owner PVZ through `inventory-service`
-- active vacancy checks for PVZ updates are exposed to `inventory-service`
-- assignment is created from accepted response
-- response creation synchronously creates conversation through `communication-service`
-- old vacancy is not reused after `assignment.cancelled`
-- reviews are allowed after `completed` and `cancelled`
-- review replies are flat and sorted by `created_at ASC`
+- Vacancy can be created only for approved owner PVZ.
+- PVZ approval is checked through `inventory-service`, not by reading `inventory.*`.
+- Active vacancy for inventory update guard means `published` or `assigned`.
+- Repeat response to the same vacancy after `withdrawn` is forbidden.
+- Assignment is created when owner accepts a response.
+- Old vacancy is not reused after `assignment.cancelled`.
+- Reviews are allowed after `completed` and `cancelled`.
+- Review replies are flat: only one reply level under root review.
+- `matching.response_created` is published after response creation.
 
-## Integrations
+## Required Inventory Integration
 
-- PostgreSQL
-- gRPC via gateway
-- gRPC calls to `inventory-service` for approved PVZ validation
-- calls to `communication-service` for conversation creation
-- gRPC checks for `inventory-service` and `communication-service`
-- Kafka producer for `matching.response_created`
+`matching-service` must implement:
 
-## Inventory integration contract
+```text
+HasActiveVacancyForPvz(pvz_id)
+```
 
-`matching-service` must implement `HasActiveVacancyForPvz(pvz_id)` for `inventory-service`.
+Expected behavior:
 
-Rules:
+- return `true` if at least one vacancy for the PVZ has status `published` or `assigned`;
+- return `false` for `completed`, `cancelled`, or no vacancies;
+- inventory uses this check before owner PVZ update and fails closed if the RPC is unavailable.
 
-- return `true` when at least one vacancy for the PVZ has status `published` or `assigned`
-- return `false` for `completed`, `cancelled`, or no vacancies
-- inventory uses this check before owner PVZ update and fails closed if the RPC is unavailable
+## Required Communication Integration
 
-## Next implementation steps
+`matching-service` must expose:
 
-1. vacancy CRUD
-2. response create/withdraw/accept
-3. assignment create/cancel/complete
-4. reviews and replies
-5. replace inventory active-vacancy fake path with real end-to-end integration tests
+```text
+CheckResponseChatWritable(response_id)
+```
+
+`communication-service` will use it before accepting message writes.
+
+## Next Steps
+
+1. Add module/runtime structure following the existing service pattern.
+2. Add migrations.
+3. Implement vacancy CRUD/listing.
+4. Implement responses and assignment creation.
+5. Publish `matching.response_created`.
+6. Implement active vacancy checker for inventory.
+7. Implement chat writability checker for communication.
+8. Implement reviews and replies.

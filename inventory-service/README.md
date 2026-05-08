@@ -1,16 +1,19 @@
 # inventory-service
 
-Сервис ПВЗ и модерации ПВЗ.
+`inventory-service` owns PVZ data and PVZ moderation workflow.
 
-## Ответственность
+## Responsibility
 
-- create PVZ
-- read owner PVZ list
-- update PVZ data
-- approve/reject/block PVZ
-- moderator spam cleanup for an owner: delete pending PVZ requests and block remaining PVZ
+- create PVZ;
+- read one PVZ;
+- list owner PVZ;
+- update owner PVZ data;
+- check approved PVZ for future vacancy creation;
+- list pending PVZ for moderators;
+- approve/reject/block PVZ;
+- moderator owner spam cleanup.
 
-## Owned schema
+## Owned Schema
 
 Schema: `inventory`
 
@@ -19,42 +22,87 @@ Tables:
 - `inventory.pvz`
 - `inventory.pvz_moderation_events`
 
-## Важные правила
+No FK points to other service schemas. `owner_id`, `moderated_by`, and `actor_user_id` are id references to auth users, validated through service boundaries and auth metadata.
 
-- vacancy can be created only for approved PVZ
-- owner may edit PVZ data
-- PVZ update is forbidden if there are active vacancy with status `published` or `assigned`
-- after update PVZ returns to `pending`
-- spam cleanup deletes only `pending` PVZ for the owner and sets the owner's remaining PVZ to `blocked`
+## PVZ Statuses
 
-## Integrations
+- `pending`
+- `approved`
+- `rejected`
+- `blocked`
 
-- PostgreSQL
-- gRPC calls from gateway and matching-service
-- gRPC call to `matching-service.HasActiveVacancyForPvz` before PVZ update
+Transitions:
 
-## Responsibility split
+- create -> `pending`;
+- approve -> `approved`;
+- reject -> `rejected`;
+- block -> `blocked`;
+- owner update -> `pending`;
+- spam cleanup -> pending rows deleted, non-pending rows set to `blocked`.
 
-- `inventory-service` owns `inventory.pvz`, `inventory.pvz_moderation_events`, PVZ permissions, PVZ state transitions, and moderation history.
-- `matching-service` owns vacancy truth. Inventory never reads or writes `matching.*` directly.
-- `api-gateway` owns only HTTP transport, auth/CSRF middleware, and REST -> gRPC mapping.
+## Rules
 
-## Temporary matching dependency
+- Owner can create/list/read/update only their own PVZ.
+- Moderator can inspect moderation queue and moderate PVZ.
+- `RejectPvz` requires reason.
+- Every moderation decision appends a moderation event.
+- Owner update resets moderation decision fields and appends `submitted`.
+- Owner update is forbidden while active vacancy exists.
+- Vacancy can be created only for approved PVZ.
+- Spam cleanup deletes only pending PVZ requests for the owner and sets remaining owner PVZ to `blocked`.
 
-`UpdatePvz` must reject changes while a PVZ has active vacancies with status `published` or `assigned`.
+## Temporary Matching Dependency
 
-Until `matching-service` is implemented, inventory uses an `ActiveVacancyChecker` interface consumed by `internal/service`:
+`UpdatePvz` calls `matching-service.HasActiveVacancyForPvz` through the `ActiveVacancyChecker` interface.
 
-- runtime implementation calls `matching-service.HasActiveVacancyForPvz`
-- tests use fakes/mocks
-- failures are fail-closed: if matching is unavailable or returns an error, PVZ data is not mutated
+Rules:
 
-When `matching-service` is implemented, add an end-to-end test that proves PVZ update is denied for active `published` and `assigned` vacancies.
+- active vacancy means status `published` or `assigned`;
+- if matching reports active vacancy, update is denied;
+- if matching is unavailable, update fails closed and does not mutate PVZ.
 
-## Implemented backend scope
+Until `matching-service` is implemented, runtime still points to `MATCHING_GRPC_ADDR`, and tests use fakes/mocks. After matching implementation, add end-to-end coverage for the active-vacancy guard.
 
-1. PVZ create/read/list/update
-2. moderation queue and approve/reject/block decisions
-3. approved PVZ check for vacancy creation
-4. active vacancy guard for PVZ updates through the matching interface
-5. moderator owner cleanup for spam PVZ submissions
+## gRPC
+
+Implemented:
+
+- `CreatePvz`
+- `GetPvz`
+- `ListOwnerPvz`
+- `UpdatePvz`
+- `CheckPvzForVacancy`
+- `ListPendingPvz`
+- `ApprovePvz`
+- `RejectPvz`
+- `BlockPvz`
+- `DeleteOwnerPvzRequests`
+
+`DeleteOwnerPvzRequests` currently implements spam cleanup semantics: delete pending owner PVZ requests and block remaining owner PVZ.
+
+## Internal Structure
+
+- `internal/server` - thin gRPC adapter and metadata parsing.
+- `internal/service` - business rules.
+- `internal/dto` - service-level DTOs.
+- `internal/store` - SQL queries, transactions and scan/map logic.
+- `internal/matching` - active vacancy checker adapter.
+- `internal/migrations` - service-owned SQL migrations.
+
+## Local Run
+
+Run from service root so migrations resolve:
+
+```powershell
+cd C:\Users\tmcrypted\Desktop\berusmenu\inventory-service
+$env:POSTGRES_DSN="postgres://berusmenu:berusmenu@localhost:54320/berusmenu?sslmode=disable"
+$env:MATCHING_GRPC_ADDR="localhost:50053"
+$env:GRPC_ADDR=":50052"
+go run .\cmd\inventory-service
+```
+
+## Tests
+
+```powershell
+go test ./...
+```

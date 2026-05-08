@@ -1,96 +1,121 @@
 # Infrastructure
 
-Локальная инфраструктура Berusmenu для foundation-этапа.
+Local Berusmenu infrastructure lives in `infrastructure/docker-compose.yml`.
 
-## Что входит
+## Default Stack
 
-- `docker-compose.yml`
-- `.env.example`
-- контейнерные слоты для всех app workspaces
-- базовые runtime dependencies:
-  - PostgreSQL
-  - Redis
-  - Kafka
-
-## Что поднимается по умолчанию
-
-Без дополнительных profiles поднимаются:
+Without additional profiles, compose starts:
 
 - `postgres`
 - `redis`
-- `kafka`
+- `kafka` / Redpanda
 - `auth-service`
 - `inventory-service`
 - `notification-service`
 - `api-gateway`
 - `frontend`
 
-## Что пока оставлено в future profile
+`matching-service` and `communication-service` are kept under the `future` profile because their runtime implementation is still planned.
 
-Пока доменные сервисы не реализованы кодом, для них уже зафиксированы build contexts и контейнерные слоты:
+## Ports
 
-- `matching-service`
-- `communication-service`
+Values are loaded from `infrastructure/.env`.
 
-Запуск с ними:
+Typical local ports:
 
-```bash
-docker compose --env-file .env --profile future up --build
+- Postgres host port: `54320`
+- Redis host port: `6379`
+- Kafka internal listener: `9092`
+- Kafka host listener: `19092`
+- Auth gRPC: `50051`
+- Inventory gRPC: `50052`
+- API Gateway HTTP: `8080`
+- Frontend: `3000`
+
+If a port is occupied by a local service, change the value in `.env` instead of editing `docker-compose.yml`.
+
+## Run Infrastructure Only
+
+Use this when Go services are started manually from the host:
+
+```powershell
+cd C:\Users\tmcrypted\Desktop\berusmenu\infrastructure
+docker compose --env-file .env up -d postgres redis kafka
 ```
 
-## Local API run
+Host-side addresses for `go run`:
 
-Для проверки только backend API без frontend:
+```powershell
+$env:POSTGRES_DSN="postgres://berusmenu:berusmenu@localhost:54320/berusmenu?sslmode=disable"
+$env:REDIS_ADDR="localhost:6379"
+$env:KAFKA_BROKERS="localhost:19092"
+```
 
-```bash
+Docker service names work only inside the compose network:
+
+```text
+postgres:5432
+redis:6379
+kafka:9092
+```
+
+## Run Backend In Docker
+
+```powershell
+cd C:\Users\tmcrypted\Desktop\berusmenu\infrastructure
 docker compose --env-file .env up -d postgres redis kafka auth-service inventory-service notification-service api-gateway
 ```
 
-Если app-сервисы запускаются локально через `go run`, а инфраструктура остается в Docker, Kafka broker должен быть:
+## Run Full Local Stack
 
-```bash
-KAFKA_BROKERS=localhost:19092
-```
-
-Для сервисов внутри compose используется:
-
-```bash
-KAFKA_BROKERS=kafka:9092
-```
-
-Для полного локального запуска с frontend:
-
-```bash
+```powershell
+cd C:\Users\tmcrypted\Desktop\berusmenu\infrastructure
 docker compose --env-file .env up --build
 ```
 
-## Migration strategy
+## Run Future Profile
 
-Migrations не централизуются здесь.
+`matching-service` and `communication-service` are placeholders under the `future` profile:
 
-Source of truth:
+```powershell
+docker compose --env-file .env --profile future up --build
+```
+
+This profile is not part of the normal MVP runtime yet.
+
+## Migrations
+
+Migrations are owned by services, not by `infrastructure`.
+
+Current implemented migration sources:
 
 - `auth-service/internal/migrations`
 - `inventory-service/internal/migrations`
+
+Planned migration sources:
+
 - `matching-service/internal/migrations`
 - `communication-service/internal/migrations`
 
-`infrastructure` только фиксирует порядок и runtime story.
+When a Go service starts, it applies its own migrations from `MIGRATIONS_DIR`, defaulting to:
 
-## Local bootstrap order
+```text
+internal/migrations
+```
 
-1. Поднять `postgres`, `redis`, `kafka`
-2. Поднять `auth-service`, `inventory-service` и `notification-service`
-3. Поднять `api-gateway`
-4. Опционально поднять `frontend`
-5. Позже добавить future profile сервисы
+For host-side `go run`, start from the service root:
+
+```powershell
+cd C:\Users\tmcrypted\Desktop\berusmenu\auth-service
+go run .\cmd\auth-service
+```
+
+This keeps `internal/migrations` resolvable.
 
 ## Notes
 
-- `api-gateway` уже ориентирован на будущие gRPC адреса сервисов
-- Local web auth uses credentialed CORS from `http://localhost:3000` to `http://localhost:8080`
-- Production must set `COOKIE_SECURE=true` and configure HTTPS before browser auth cookies are used
-- Kafka inside compose is `kafka:9092`; host-side `go run` services should use `KAFKA_BROKERS=localhost:19092`
-- Kafka в MVP зарезервирована только под notification events
-- Redpanda healthcheck проверяет `rpk cluster health` и допускает пробелы в строке `Healthy: true`
-- Redis в MVP нужен для verification, rate limiting и realtime ephemeral state
+- Local web auth uses credentialed CORS from `http://localhost:3000` to `http://localhost:8080`.
+- Production must set `COOKIE_SECURE=true` and serve over HTTPS.
+- Redpanda exposes `kafka:9092` inside compose and `localhost:19092` to the host.
+- `notification-service` is a background worker and has no PostgreSQL schema in MVP.
+- Redis is used for verification, rate limiting and future realtime ephemeral state.

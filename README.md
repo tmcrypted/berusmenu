@@ -1,125 +1,285 @@
 # Berusmenu MVP
 
-Berusmenu is a service that helps PVZ owners in Russia urgently find a worker for a shift when there is a risk of downtime and fines.
+Berusmenu is a marketplace for urgent PVZ shift staffing. The MVP goal is to give a PVZ owner a short path from an uncovered shift to a selected worker, while keeping operations and service ownership simple.
 
-This workspace is a monorepo for the MVP. All microservices live in this single repository, maintaining strict architectural boundaries and database isolation.
+This monorepo contains backend services, frontend, protobuf contracts and local infrastructure.
 
 Canonical Go import path:
 
-- `github.com/tmcrypted/berusmenu/...`
+```text
+github.com/tmcrypted/berusmenu/...
+```
 
 Local Go workspace:
 
-- `go.work` joins `proto`, `api-gateway`, `auth-service`, `inventory-service`, and `notification-service` for local development.
+```text
+go.work
+```
 
-## Структура монорепозитория
+Current `go.work` modules:
 
-Текущий набор директорий (микросервисов и общих компонентов):
-
+- `proto`
 - `api-gateway`
 - `auth-service`
 - `inventory-service`
+- `notification-service`
+
+## Repository Structure
+
+- `api-gateway` - public HTTP API, cookie auth, CSRF, REST to gRPC mapping.
+- `auth-service` - accounts, sessions, JWT, email verification, profile, timed user block.
+- `inventory-service` - PVZ records, moderation statuses, moderation history, owner checks.
+- `matching-service` - planned service for vacancy/response/assignment/review.
+- `communication-service` - planned service for conversations/messages/read state.
+- `notification-service` - Kafka consumer and email notification delivery.
+- `proto` - protobuf contracts and shared enums.
+- `frontend` - Next.js frontend.
+- `infrastructure` - Docker Compose local runtime.
+- `docs` - architecture, permissions, state transitions, runtime topology and roadmap.
+
+## Current Status
+
+Implemented:
+
+- `auth-service`: register/login/refresh/logout, JWT validation, `GET/PATCH /v1/me`, email verification, resend cooldown/lockout, timed user block through `blocked_until`.
+- `notification-service`: consumes `auth.email_verification_requested` and `matching.response_created`, uses retry-aware Kafka commit policy and a local email stub sender.
+- `inventory-service`: create/read/list/update PVZ, moderation queue, approve/reject/block PVZ, owner-only access, moderator-only moderation, temporary matching dependency for active vacancy checks.
+- `api-gateway`: auth/profile routes, inventory routes, moderation routes, cookie/CSRF middleware, gRPC clients.
+- `frontend`: auth flow, email verification, profile completion, owner PVZ flow, moderator PVZ moderation panel, timed owner spam block action.
+
+Not implemented as runnable services yet:
+
 - `matching-service`
 - `communication-service`
+
+They already have protobuf outlines, architecture rules and Docker future-profile placeholders.
+
+## Product Flow
+
+1. User registers with email/password and role.
+2. User verifies email by code.
+3. User completes profile after verification.
+4. Owner creates PVZ; the request enters `pending`.
+5. Moderator approves, rejects or blocks PVZ.
+6. Owner can create vacancy only for approved PVZ.
+7. Worker responds to vacancy.
+8. Conversation is created after response.
+9. Owner selects worker and assignment is created.
+10. After `completed` or `cancelled`, both sides can create review and reply.
+
+The current implemented slice covers backend and frontend up to PVZ moderation. Vacancy, response, assignment, chat and review flows are next.
+
+## Architecture Rules
+
+- One PostgreSQL database, separate schema per service.
+- FK only inside a service schema.
+- Cross-schema references are stored as plain ids and validated through owning services.
+- No service writes another service schema.
+- Public web API goes through `api-gateway`.
+- Browser auth uses HttpOnly cookies for access/refresh tokens.
+- Frontend does not store JWT or refresh token in JavaScript.
+- Authenticated unsafe HTTP methods require `X-CSRF-Token`.
+- Gateway forwards identity to internal gRPC calls through metadata.
+- Gateway stays thin; business rules live in owning services.
+- Kafka is used only for notification events in MVP.
+- Redis is used for verification, rate limiting and future realtime ephemeral state.
+
+## Data Ownership
+
+### `auth-service`
+
+Schema: `auth`
+
+- `auth.users`
+- `auth.refresh_sessions`
+
+`auth.users.blocked_until` supports temporary moderator blocks. While a block is active, login/refresh/JWT validation are denied. After `blocked_until` expires, the user can authenticate again without a manual unblock.
+
+### `inventory-service`
+
+Schema: `inventory`
+
+- `inventory.pvz`
+- `inventory.pvz_moderation_events`
+
+PVZ statuses:
+
+- `pending`
+- `approved`
+- `rejected`
+- `blocked`
+
+Owner can update their PVZ, but update returns PVZ to `pending` and is denied when active vacancy exists. Active vacancy means future matching status `published` or `assigned`.
+
+Moderator spam cleanup:
+
+- temporarily blocks owner in `auth-service`;
+- deletes owner pending PVZ requests;
+- sets owner remaining PVZ to `blocked`;
+- writes `blocked` moderation events for affected PVZ rows.
+
+### `matching-service`
+
+Planned schema: `matching`
+
+- `matching.vacancies`
+- `matching.responses`
+- `matching.assignments`
+- `matching.reviews`
+- `matching.review_replies`
+
+This service will own vacancy truth and `HasActiveVacancyForPvz`.
+
+### `communication-service`
+
+Planned schema: `communication`
+
+- `communication.conversations`
+- `communication.messages`
+- `communication.message_reads`
+
+This service will own chat semantics.
+
+### `notification-service`
+
+No PostgreSQL schema in MVP. It runs as a background worker.
+
+## Runtime
+
+Default Docker Compose stack:
+
+- `postgres`
+- `redis`
+- `kafka` / Redpanda
+- `auth-service`
+- `inventory-service`
 - `notification-service`
-- `proto`
+- `api-gateway`
 - `frontend`
-- `infrastructure`
 
-Все сервисы и фронтенд находятся в одном Git-репозитории.
+Future profile:
 
-## Продуктовый MVP
+- `matching-service`
+- `communication-service`
 
-Роли:
+Inside Compose, services use:
 
-- `owner` — владелец ПВЗ
-- `worker` — исполнитель смены
-- `moderator` — модератор ПВЗ
+```text
+postgres:5432
+redis:6379
+kafka:9092
+```
 
-Ключевой путь:
+For host-side `go run`, use host ports:
 
-1. Пользователь регистрируется по email и паролю.
-2. Email подтверждается кодом.
-3. Owner создает ПВЗ и отправляет на модерацию.
-4. Moderator одобряет или отклоняет ПВЗ.
-5. Owner создает vacancy только для approved ПВЗ.
-6. Worker откликается на vacancy.
-7. Сразу после response создается conversation.
-8. Owner выбирает worker, создается assignment.
-9. После `completed` или `cancelled` обе стороны могут оставить review.
-10. Под review можно оставлять replies без вложенности глубже одного уровня.
+```powershell
+$env:POSTGRES_DSN="postgres://berusmenu:berusmenu@localhost:54320/berusmenu?sslmode=disable"
+$env:REDIS_ADDR="localhost:6379"
+$env:KAFKA_BROKERS="localhost:19092"
+```
 
-## Ключевые архитектурные решения
+Run Go services from the service root so `MIGRATIONS_DIR=internal/migrations` resolves correctly.
 
-- Одна PostgreSQL база, но отдельная схема на сервис.
-- FK только внутри схем сервиса.
-- Публичный API идет через `api-gateway`.
-- Web auth использует HttpOnly cookies для access/refresh tokens; frontend не хранит токены в JavaScript.
-- Gateway выполняет cookie/CSRF проверки на HTTP-границе и передает identity во внутренние gRPC metadata.
-- Внутренние вызовы между backend-сервисами идут по gRPC.
-- Gateway stays thin; cross-domain business checks live in owning services.
-- Kafka в MVP используется только для notification events.
-- Redis в MVP используется для verification/rate limiting/presence.
-- `notification-service` отделен от доменных сервисов и не имеет своей БД в MVP.
-- Email channel в MVP: log/stub sender для local development; Mailganer planned as production provider.
-- PVZ update directly mutates `inventory.pvz`, sets it back to `pending`, and is forbidden while active vacancy exists.
-- Moderator spam cleanup temporarily blocks the owner account in `auth-service`, deletes that owner's pending PVZ requests, and moves the owner's remaining PVZ to `blocked`.
-- Chat создается сразу после `response`.
-- Chat становится read-only после `assignment.completed` и `assignment.cancelled`.
+Auth:
 
-## Notification Flow
+```powershell
+cd C:\Users\tmcrypted\Desktop\berusmenu\auth-service
+$env:GRPC_ADDR=":50051"
+go run .\cmd\auth-service
+```
 
-Kafka topics in MVP:
+Inventory:
+
+```powershell
+cd C:\Users\tmcrypted\Desktop\berusmenu\inventory-service
+$env:GRPC_ADDR=":50052"
+$env:MATCHING_GRPC_ADDR="localhost:50053"
+go run .\cmd\inventory-service
+```
+
+Gateway:
+
+```powershell
+cd C:\Users\tmcrypted\Desktop\berusmenu\api-gateway
+$env:HTTP_ADDR=":8080"
+$env:AUTH_GRPC_ADDR="localhost:50051"
+$env:INVENTORY_GRPC_ADDR="localhost:50052"
+go run .\cmd\api-gateway
+```
+
+Notification:
+
+```powershell
+cd C:\Users\tmcrypted\Desktop\berusmenu\notification-service
+$env:KAFKA_BROKERS="localhost:19092"
+go run .\cmd\notification-service
+```
+
+## Public HTTP Scope
+
+Auth/profile:
+
+- `POST /v1/auth/register`
+- `POST /v1/auth/login`
+- `POST /v1/auth/refresh`
+- `GET /v1/auth/session`
+- `POST /v1/auth/logout`
+- `POST /v1/auth/resend-code`
+- `POST /v1/auth/verify-email`
+- `GET /v1/me`
+- `PATCH /v1/me`
+
+Inventory:
+
+- `POST /v1/pvz`
+- `GET /v1/pvz`
+- `GET /v1/pvz/{id}`
+- `PATCH /v1/pvz/{id}`
+- `GET /v1/moderation/pvz`
+- `POST /v1/moderation/pvz/{id}/approve`
+- `POST /v1/moderation/pvz/{id}/reject`
+- `POST /v1/moderation/pvz/{id}/block`
+- `POST /v1/moderation/users/{id}/block-and-delete-pvz`
+
+Matching and communication routes are placeholders until those services are implemented.
+
+## Kafka Events
+
+MVP topics:
 
 - `auth.email_verification_requested`
 - `matching.response_created`
 
-Notification delivery channel:
+`notification-service` consumes both. Local delivery uses a log/stub sender.
 
-- email only
+## Redis Keys
 
-Delivery выполняет `notification-service`, который читает события из Kafka и передает их в email sender abstraction. В local development sender пишет email-заглушки в logs; Mailganer остается planned production provider.
+- `email_verify:{user_id}` - verification code, TTL 10 minutes.
+- `email_verify_resend:{user_id}` - resend cooldown, TTL 60 seconds.
+- `email_verify_attempts:{user_id}` - failed attempts and 1 hour lockout after 3 failures.
 
-Kafka bootstrap addresses:
+Planned Redis usage also includes rate limiting, presence, typing state and websocket ephemeral state.
 
-- Docker compose services use `kafka:9092`.
-- Host-side `go run` services use `localhost:19092`.
+## Verification
 
-## Redis Usage
+Backend:
 
-Redis используется для:
+```powershell
+go test ./api-gateway/... ./auth-service/... ./inventory-service/... ./notification-service/... ./proto/...
+```
 
-- `email_verify:{user_id}` -> verification code, TTL 10 minutes
-- `email_verify_resend:{user_id}` -> resend cooldown, TTL 60 seconds
-- `email_verify_attempts:{user_id}` -> 3 failed attempts -> lockout for 1 hour
-- rate limiting
-- online/offline presence
-- typing status
-- active websocket connections
+Frontend:
 
-Повторная отправка verification code пересылает тот же действующий код, пока он не истек и нет lockout.
+```powershell
+cd frontend
+npm run lint
+npx tsc --noEmit
+```
 
-## Unverified Users
-
-При регистрации gateway ставит auth cookies, но пока email не подтвержден, backend разрешает только whitelist endpoints:
-
-- `logout`
-- `resend verification code`
-- `verify email`
-- `me` is not available until email verification succeeds
-
-Все остальные действия запрещены на backend, а frontend перенаправляет пользователя на экран подтверждения email.
-
-## Web Auth Security
-
-- `berusmenu_access` and `berusmenu_refresh` are HttpOnly cookies.
-- `berusmenu_csrf` is readable by frontend and must be sent as `X-CSRF-Token` for authenticated unsafe requests.
-- `Authorization: Bearer` is not used by the public web API.
-- Refresh token revocation is stored in `auth.refresh_sessions` through hashed tokens and `revoked_at`.
+Production build is not required for every local check.
 
 ## Documentation Map
 
-- [AGENTS.md](AGENTS.md)
 - [HTTP API](api-gateway/docs/http-api.md)
 - [Insomnia Collection](api-gateway/insomnia/berusmenu-api.json)
 - [Architecture](docs/architecture.md)
@@ -131,24 +291,19 @@ Redis используется для:
 - [Events And Cache](docs/events-and-cache.md)
 - [Runtime Topology](docs/runtime-topology.md)
 - [Development Plan](docs/development-plan.md)
+- [Infrastructure](infrastructure/README.md)
+- [Frontend](frontend/README.md)
 
-## Frontend MVP update
+When HTTP API behavior changes, update both:
 
-- frontend auth now follows `register -> verify email -> complete profile`
-- registration can start with only `email + password + role`
-- profile completion is done after verification through `PATCH /v1/me`
-- first-paint frontend auth state is bootstrapped server-side through read-only `GET /v1/auth/session`, not through refresh-token rotation
-- the current frontend slice is built as a responsive web UI for phone, tablet, and desktop, with manual light/dark theme switching
+- `api-gateway/docs/http-api.md`
+- `api-gateway/insomnia/berusmenu-api.json`
 
-## Что дальше
+## Next Steps
 
-Следующие инженерные шаги:
-
-1. Довести REST/gRPC contracts для `inventory-service`, `matching-service`, `communication-service`.
-2. Реализовать `inventory-service`.
-3. Реализовать `matching-service`.
-4. Реализовать `communication-service`.
-5. Доработать `api-gateway` REST -> gRPC mapping для доменных сервисов.
-6. Реализовать frontend flows.
-7. Добавить integration tests для основных business paths.
-8. Описать production deployment notes в `infrastructure`.
+1. Implement `matching-service` backend.
+2. Replace the temporary inventory active-vacancy dependency with real matching integration.
+3. Implement vacancy/response/assignment frontend and backend flows.
+4. Implement `communication-service` and chat UI.
+5. Add integration tests for main business paths.
+6. Document production deployment in `infrastructure`.

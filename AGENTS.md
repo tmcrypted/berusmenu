@@ -1,70 +1,70 @@
 # AGENTS
 
-Глобальный файл правил для монорепозитория `berusmenu`.
+Global rules for the `berusmenu` monorepo.
 
-## Область действия
+## Scope
 
-Этот файл обязателен для всех сервисов внутри монорепозитория.
+This file applies to every service and workspace in the monorepo.
 
-Если в директории сервиса есть свой `AGENTS.md`, он:
+If a service directory has its own `AGENTS.md`, it must:
 
-- сначала ссылается на `../AGENTS.md`
-- дополняет только локальные правила
-- не переопределяет глобальные продуктовые и архитектурные решения
+- link to `../AGENTS.md` first;
+- add only local rules;
+- not override global product or architecture decisions.
 
-## Продуктовый контекст
+## Product Context
 
-Berusmenu — маркетплейс срочного подбора сотрудника на смену в ПВЗ.
+Berusmenu is a marketplace for urgent PVZ shift staffing.
 
-При проектировании и реализации оптимизируем за:
+When designing and implementing, optimize for:
 
-- короткий путь от vacancy к assignment
-- простую эксплуатацию
-- чистое владение данными
-- быстрый вывод MVP в production
+- short path from vacancy to assignment;
+- simple operations;
+- clean data ownership;
+- fast MVP delivery to production.
 
-## Сервисные границы
+## Service Boundaries
 
 ### `auth-service`
 
-Владеет account, sessions, email verification, JWT и profile.
+Owns accounts, sessions, email verification, JWT, profile and timed user blocks.
 
 ### `inventory-service`
 
-Владеет PVZ и moderation workflow.
+Owns PVZ records and moderation workflow.
 
 ### `matching-service`
 
-Владеет vacancies, responses, assignments, reviews и review replies.
+Owns vacancies, responses, assignments, reviews and review replies.
 
 ### `communication-service`
 
-Владеет conversations, messages, read state и chat semantics.
+Owns conversations, messages, read state and chat semantics.
 
 ### `notification-service`
 
-Владеет Kafka notification consumption и email delivery.
+Owns Kafka notification consumption and email delivery.
 
 ### `api-gateway`
 
-Владеет public HTTP API, auth middleware и REST to gRPC mapping.
+Owns public HTTP API, auth middleware and REST to gRPC mapping.
 
 ### `proto`
 
-Владеет protobuf contracts и enums.
+Owns protobuf contracts and shared enums.
 
 ## Data Rules
 
-- Одна база Postgres, отдельная схема на сервис.
-- FK только внутри схем сервиса.
-- Между схемами только id references и валидация в owning service.
-- Один сервис не пишет в схему другого сервиса.
+- One Postgres database, separate schema per service.
+- FK only inside a service schema.
+- Between schemas, store plain ids and validate through owning services.
+- No service writes another service schema.
 
 ## Sync / Async Rules
 
-- Основные бизнес-транзакции синхронные.
-- Kafka в MVP используется только для notification events.
-- Redis в MVP используется только для verification/rate limiting/presence and websocket ephemeral state.
+- Core business transactions are synchronous.
+- Kafka is used only for notification events in MVP.
+- Redis is used for verification, rate limiting, presence and websocket ephemeral state.
 
 Kafka topics in MVP:
 
@@ -73,10 +73,11 @@ Kafka topics in MVP:
 
 ## Auth Rules
 
-- Пользователь получает JWT при регистрации.
-- Пока `email_verified_at` is null, backend разрешает только whitelist endpoints.
-- Verification code logic живет только в `auth-service`.
-- Verification code хранится в Redis.
+- User receives JWT at registration.
+- While `email_verified_at` is null, backend allows only whitelist endpoints.
+- Verification code logic lives only in `auth-service`.
+- Verification code is stored in Redis.
+- Timed user block is represented by `auth.users.blocked_until`.
 
 Redis keys:
 
@@ -86,59 +87,62 @@ Redis keys:
 
 Verification policy:
 
-- resend шлет тот же код, пока он еще жив
-- resend cooldown 60 seconds
-- после 3 failed verify attempts lockout 1 hour
+- resend sends the same active code while it is alive;
+- resend cooldown is 60 seconds;
+- after 3 failed verify attempts, lockout is 1 hour.
 
 ## Matching Rules
 
-- `response` can be `pending`, `accepted`, `rejected`, `withdrawn`
-- повторный отклик на ту же vacancy после `withdrawn` запрещен
-- `assignment` создается при выборе worker
-- после `assignment.cancelled` старая vacancy больше не используется
-- reviews разрешены после `completed` и `cancelled`
-- replies разрешены только к root review и без вложенности глубже одного уровня
+- `response` can be `pending`, `accepted`, `rejected`, `withdrawn`.
+- Repeat response to the same vacancy after `withdrawn` is forbidden.
+- `assignment` is created when owner selects a worker.
+- After `assignment.cancelled`, the old vacancy is not reused.
+- Reviews are allowed after `completed` and `cancelled`.
+- Replies are allowed only to root review and without nesting deeper than one level.
 
 ## Inventory Rules
 
-- vacancy можно создать только для approved PVZ
-- owner может редактировать ПВЗ
-- update request for PVZ запрещен при active vacancy
-- active vacancy для этого правила: `published` и `assigned`
-- после update ПВЗ снова становится `pending`
-- новые vacancy по ПВЗ запрещены, пока ПВЗ не `approved`
+- Vacancy can be created only for approved PVZ.
+- Owner can edit PVZ.
+- PVZ update is forbidden when active vacancy exists.
+- Active vacancy for that rule means `published` or `assigned`.
+- After update, PVZ becomes `pending` again.
+- New vacancies for a PVZ are forbidden while PVZ is not `approved`.
+- Moderator spam cleanup temporarily blocks owner, deletes pending owner PVZ requests and sets remaining owner PVZ to `blocked`.
 
 ## Chat Rules
 
-- conversation создается сразу после `response`
-- chat хранится в `communication-service`
-- chat read-only после `assignment.completed` и `assignment.cancelled`
-- писать в conversation могут только его участники
+- Conversation is created immediately after `response`.
+- Chat is stored in `communication-service`.
+- Chat is read-only after `assignment.completed` and `assignment.cancelled`.
+- Only conversation participants can write to the conversation.
 
 ## Documentation Expectations
 
-При любом изменении API, контрактов, runtime, env, Docker, service boundaries или developer workflow обязательно проверять и обновлять релевантные `.md` файлы.
+- All documentation must be written in English.
+- Prefer ASCII in documentation files to avoid terminal/codepage issues.
+- When API, contracts, runtime, env, Docker, service boundaries or developer workflow change, update the relevant `.md` files.
 
-При изменении продуктовых решений обновлять:
+When product decisions change, update:
 
-- root `README.md`
-- `docs/architecture.md`
-- `docs/system-design.md`
+- root `README.md`;
+- `docs/architecture.md`;
+- `docs/system-design.md`.
 
-При изменении конкретного сервиса обновлять его локальные docs.
+When a concrete service changes, update its local docs.
 
-При изменении HTTP API в `api-gateway` обязательно обновлять:
+When HTTP API changes in `api-gateway`, update:
 
-- `api-gateway/docs/http-api.md`
-- `api-gateway/insomnia/berusmenu-api.json`
+- `api-gateway/docs/http-api.md`;
+- `api-gateway/insomnia/berusmenu-api.json`.
 
-## Non-goals for MVP
+## Non-Goals For MVP
 
-Пока не тратим время на:
+Do not spend time on:
 
-- payments
-- advanced observability stack
-- recommendation engine
-- CQRS/event sourcing ради самих себя
-- clickhouse analytics pipeline
-- multi-channel notifications beyond email
+- payments;
+- advanced observability stack;
+- recommendation engine;
+- CQRS/event sourcing for its own sake;
+- ClickHouse analytics pipeline;
+- multi-channel notifications beyond email.

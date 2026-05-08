@@ -50,9 +50,12 @@ flowchart TB
 
     Gateway --> Auth["auth-service :50051"]
     Gateway --> Inventory["inventory-service :50052"]
+    Gateway -. future .-> Matching["matching-service :50053"]
+    Gateway -. future .-> Communication["communication-service :50054"]
 
     Auth --> Postgres["postgres :5432"]
     Inventory --> Postgres
+    Inventory -. active vacancy check .-> Matching
     Auth --> Redis["redis :6379"]
     Auth --> Kafka["redpanda/kafka :9092"]
 
@@ -68,6 +71,14 @@ Local API-only run:
 
 ```bash
 docker compose --env-file .env up -d postgres redis kafka auth-service inventory-service notification-service api-gateway
+```
+
+For host-side `go run`, use host ports instead of Docker service names:
+
+```powershell
+$env:POSTGRES_DSN="postgres://berusmenu:berusmenu@localhost:54320/berusmenu?sslmode=disable"
+$env:REDIS_ADDR="localhost:6379"
+$env:KAFKA_BROKERS="localhost:19092"
 ```
 
 Local frontend origin defaults to `http://localhost:3000`; gateway CORS must include that origin so browser cookies work across `localhost:3000` -> `localhost:8080`.

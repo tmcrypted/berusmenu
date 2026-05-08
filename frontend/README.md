@@ -38,7 +38,7 @@ Frontend workspace for the Berusmenu MVP.
 - unverified user is redirected to `/verify-email`
 - verified but incomplete user is redirected to a role-specific completion screen
 - worker cannot proceed to responses until profile completion
-- owner completes profile first and then proceeds to the future PVZ flow
+- owner completes profile first and then proceeds to the PVZ flow
 - owner can create/list/edit PVZ through inventory endpoints
 - moderator accounts are assigned outside the UI and can process pending PVZ requests, including timed owner spam block with PVZ cleanup
 - both light and dark themes are first-class and switched manually

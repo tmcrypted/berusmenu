@@ -1,38 +1,47 @@
-# REST и gRPC Outline
+# REST And gRPC Interfaces
 
 ## Public REST via API Gateway
 
-Auth transport:
+Web auth transport:
 
-- Web clients authenticate with `berusmenu_access` HttpOnly cookie.
-- Refresh uses `berusmenu_refresh` HttpOnly cookie.
-- Authenticated unsafe methods require `X-CSRF-Token` matching `berusmenu_csrf`.
-- Gateway forwards verified identity to gRPC services through metadata.
+- `berusmenu_access` HttpOnly cookie carries the access JWT.
+- `berusmenu_refresh` HttpOnly cookie carries the refresh token.
+- `berusmenu_csrf` is readable by frontend.
+- Authenticated unsafe methods require `X-CSRF-Token` equal to `berusmenu_csrf`.
+- Gateway validates cookies through `auth-service` and forwards identity downstream through gRPC metadata.
+
+## Implemented REST
 
 ### Auth
 
 - `POST /v1/auth/register`
 - `POST /v1/auth/login`
 - `POST /v1/auth/refresh`
+- `GET /v1/auth/session`
 - `POST /v1/auth/logout`
 - `POST /v1/auth/resend-code`
 - `POST /v1/auth/verify-email`
 - `GET /v1/me`
 - `PATCH /v1/me`
 
-### PVZ
+### PVZ Owner Flow
 
 - `POST /v1/pvz`
 - `GET /v1/pvz`
 - `GET /v1/pvz/{id}`
 - `PATCH /v1/pvz/{id}`
 
-### Moderation
+### PVZ Moderation Flow
 
 - `GET /v1/moderation/pvz`
 - `POST /v1/moderation/pvz/{id}/approve`
 - `POST /v1/moderation/pvz/{id}/reject`
 - `POST /v1/moderation/pvz/{id}/block`
+- `POST /v1/moderation/users/{id}/block-and-delete-pvz`
+
+The last endpoint orchestrates two owning services: timed user block in `auth-service`, then owner PVZ cleanup in `inventory-service`.
+
+## Planned REST
 
 ### Vacancies
 
@@ -64,9 +73,11 @@ Auth transport:
 - `POST /v1/conversations/{id}/read`
 - `WS /ws/conversations/{id}`
 
-## gRPC outline
+## gRPC Services
 
 ### AuthService
+
+Implemented:
 
 - `Register`
 - `Login`
@@ -77,8 +88,13 @@ Auth transport:
 - `UpdateProfile`
 - `ResendVerificationCode`
 - `VerifyEmail`
+- `BlockUser`
+
+`BlockUser` requires moderator identity metadata and `blocked_until`.
 
 ### InventoryService
+
+Implemented:
 
 - `CreatePvz`
 - `GetPvz`
@@ -89,8 +105,13 @@ Auth transport:
 - `ApprovePvz`
 - `RejectPvz`
 - `BlockPvz`
+- `DeleteOwnerPvzRequests`
+
+`DeleteOwnerPvzRequests` currently deletes owner pending PVZ rows and blocks remaining owner PVZ rows. The RPC name is intentionally transport-level legacy; service behavior is documented in inventory docs.
 
 ### MatchingService
+
+Planned:
 
 - `CreateVacancy`
 - `ListVacancies`
@@ -110,6 +131,8 @@ Auth transport:
 
 ### CommunicationService
 
+Planned:
+
 - `CreateConversationForResponse`
 - `ListConversations`
 - `ListMessages`
@@ -120,7 +143,7 @@ Auth transport:
 
 No public API in MVP.
 
-Only Kafka consumer handlers:
+Kafka handlers:
 
-- handle `auth.email_verification_requested`
-- handle `matching.response_created`
+- `auth.email_verification_requested`
+- `matching.response_created`
