@@ -49,8 +49,10 @@ flowchart TB
     Frontend["frontend :3000"] --> Gateway
 
     Gateway --> Auth["auth-service :50051"]
+    Gateway --> Inventory["inventory-service :50052"]
 
     Auth --> Postgres["postgres :5432"]
+    Inventory --> Postgres
     Auth --> Redis["redis :6379"]
     Auth --> Kafka["redpanda/kafka :9092"]
 
@@ -65,7 +67,7 @@ Kafka listeners:
 Local API-only run:
 
 ```bash
-docker compose --env-file .env up -d postgres redis kafka auth-service notification-service api-gateway
+docker compose --env-file .env up -d postgres redis kafka auth-service inventory-service notification-service api-gateway
 ```
 
 Local frontend origin defaults to `http://localhost:3000`; gateway CORS must include that origin so browser cookies work across `localhost:3000` -> `localhost:8080`.

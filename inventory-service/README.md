@@ -29,9 +29,29 @@ Tables:
 
 - PostgreSQL
 - gRPC calls from gateway and matching-service
+- gRPC call to `matching-service.HasActiveVacancyForPvz` before PVZ update
 
-## Next implementation steps
+## Responsibility split
 
-1. PVZ CRUD
-2. moderation endpoints
-3. checks for vacancy creation and PVZ update restrictions
+- `inventory-service` owns `inventory.pvz`, `inventory.pvz_moderation_events`, PVZ permissions, PVZ state transitions, and moderation history.
+- `matching-service` owns vacancy truth. Inventory never reads or writes `matching.*` directly.
+- `api-gateway` owns only HTTP transport, auth/CSRF middleware, and REST -> gRPC mapping.
+
+## Temporary matching dependency
+
+`UpdatePvz` must reject changes while a PVZ has active vacancies with status `published` or `assigned`.
+
+Until `matching-service` is implemented, inventory uses an `ActiveVacancyChecker` interface consumed by `internal/service`:
+
+- runtime implementation calls `matching-service.HasActiveVacancyForPvz`
+- tests use fakes/mocks
+- failures are fail-closed: if matching is unavailable or returns an error, PVZ data is not mutated
+
+When `matching-service` is implemented, add an end-to-end test that proves PVZ update is denied for active `published` and `assigned` vacancies.
+
+## Implemented backend scope
+
+1. PVZ create/read/list/update
+2. moderation queue and approve/reject/block decisions
+3. approved PVZ check for vacancy creation
+4. active vacancy guard for PVZ updates through the matching interface

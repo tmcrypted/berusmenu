@@ -38,6 +38,7 @@ Status: pending.
 1. Implement `inventory-service`.
 2. Implement `matching-service`.
 3. Implement `communication-service`.
+4. After `matching-service` is implemented, replace the temporary inventory active-vacancy checker test path with real `HasActiveVacancyForPvz` integration coverage for `published` and `assigned` vacancies.
 
 ## Phase 4. Edge and UI
 

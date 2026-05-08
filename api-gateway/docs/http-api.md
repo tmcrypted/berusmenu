@@ -319,6 +319,163 @@ Success `200`: same shape as `GET /v1/me`.
 
 Possible errors: `400`, `401`, `403`, `404`.
 
+## Inventory
+
+All inventory routes require access cookie auth and verified email. Unsafe methods require `X-CSRF-Token`.
+
+Inventory business rules live in `inventory-service`; gateway only maps HTTP to gRPC.
+
+### `POST /v1/pvz`
+
+Creates a PVZ for the current owner with status `pending` and appends a `submitted` moderation event.
+
+Auth: owner.
+
+Request:
+
+```json
+{
+  "city": "Moscow",
+  "address": "Tverskaya 1",
+  "company_name": "Beru",
+  "contact_phone": "+79990001122",
+  "contact_telegram": "@beru_pvz",
+  "description": "Main pickup point",
+  "lat": 55.7558,
+  "lng": 37.6173
+}
+```
+
+Required fields: `city`, `address`, `company_name`, `contact_phone`.
+
+Success `201`: PVZ object.
+
+Possible errors: `400`, `401`, `403`, `500`.
+
+### `GET /v1/pvz`
+
+Returns the current owner's PVZ list.
+
+Auth: owner.
+
+Query:
+
+- `page_size`: optional, default 20, max 100.
+- `page_token`: optional numeric offset token.
+
+Success `200`:
+
+```json
+{
+  "items": [],
+  "next_page_token": "20"
+}
+```
+
+Possible errors: `400`, `401`, `403`, `500`.
+
+### `GET /v1/pvz/{id}`
+
+Returns a PVZ visible to the current user. Owners can read their own PVZ; moderators can inspect PVZ for moderation.
+
+Success `200`: PVZ object.
+
+Possible errors: `400`, `401`, `403`, `404`.
+
+### `PATCH /v1/pvz/{id}`
+
+Updates owner PVZ data, sets status back to `pending`, clears prior moderation decision fields, and appends a `submitted` moderation event.
+
+Auth: owner. The owner can update only their own PVZ.
+
+Request: same fields as create, all optional, but at least one field is required.
+
+Temporary matching dependency: before mutating data, `inventory-service` calls `matching-service.HasActiveVacancyForPvz`. If matching reports an active vacancy or the RPC is unavailable, the PVZ is not changed.
+
+Success `200`: PVZ object.
+
+Possible errors: `400`, `401`, `403`, `404`, `412`, `503`.
+
+### `GET /v1/moderation/pvz`
+
+Returns pending PVZ for moderator review.
+
+Auth: moderator.
+
+Query: same pagination fields as `GET /v1/pvz`.
+
+Success `200`:
+
+```json
+{
+  "items": [],
+  "next_page_token": "20"
+}
+```
+
+Possible errors: `400`, `401`, `403`, `500`.
+
+### `POST /v1/moderation/pvz/{id}/approve`
+
+Approves a PVZ and appends an `approved` moderation event.
+
+Auth: moderator.
+
+Request:
+
+```json
+{
+  "comment": "Documents checked"
+}
+```
+
+`comment` is optional.
+
+Success `200`: PVZ object.
+
+Possible errors: `400`, `401`, `403`, `404`.
+
+### `POST /v1/moderation/pvz/{id}/reject`
+
+Rejects a PVZ, stores `rejection_reason`, and appends a `rejected` moderation event.
+
+Auth: moderator.
+
+Request:
+
+```json
+{
+  "reason": "Invalid address",
+  "comment": "Owner should update legal address"
+}
+```
+
+`reason` is required; `comment` is optional.
+
+Success `200`: PVZ object.
+
+Possible errors: `400`, `401`, `403`, `404`.
+
+### `POST /v1/moderation/pvz/{id}/block`
+
+Blocks a PVZ and appends a `blocked` moderation event.
+
+Auth: moderator.
+
+Request:
+
+```json
+{
+  "comment": "Fraud report confirmed"
+}
+```
+
+`comment` is optional.
+
+Success `200`: PVZ object.
+
+Possible errors: `400`, `401`, `403`, `404`.
+
 ## Placeholder Endpoints
 
 These routes are registered in the gateway but currently return:
@@ -332,17 +489,6 @@ These routes are registered in the gateway but currently return:
   }
 }
 ```
-
-Inventory:
-
-- `POST /v1/pvz`
-- `GET /v1/pvz`
-- `GET /v1/pvz/:id`
-- `PATCH /v1/pvz/:id`
-- `GET /v1/moderation/pvz`
-- `POST /v1/moderation/pvz/:id/approve`
-- `POST /v1/moderation/pvz/:id/reject`
-- `POST /v1/moderation/pvz/:id/block`
 
 Matching:
 

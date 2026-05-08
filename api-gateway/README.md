@@ -19,7 +19,8 @@ Gateway принимает запросы от frontend, валидирует au
 - health endpoints
 - auth endpoints
 - current user profile
-- skeleton route groups for inventory, matching and communication
+- inventory PVZ and moderation REST -> gRPC routes
+- skeleton route groups for matching and communication
 - gRPC clients to downstream services
 
 ## Endpoints
@@ -39,6 +40,17 @@ Gateway принимает запросы от frontend, валидирует au
 - `POST /v1/auth/verify-email`
 - `GET /v1/me`
 - `PATCH /v1/me`
+
+### Inventory
+
+- `POST /v1/pvz`
+- `GET /v1/pvz`
+- `GET /v1/pvz/{id}`
+- `PATCH /v1/pvz/{id}`
+- `GET /v1/moderation/pvz`
+- `POST /v1/moderation/pvz/{id}/approve`
+- `POST /v1/moderation/pvz/{id}/reject`
+- `POST /v1/moderation/pvz/{id}/block`
 
 ## Unverified user policy
 

@@ -20,6 +20,7 @@
 - `redis`
 - `kafka`
 - `auth-service`
+- `inventory-service`
 - `notification-service`
 - `api-gateway`
 - `frontend`
@@ -28,7 +29,6 @@
 
 Пока доменные сервисы не реализованы кодом, для них уже зафиксированы build contexts и контейнерные слоты:
 
-- `inventory-service`
 - `matching-service`
 - `communication-service`
 
@@ -43,7 +43,7 @@ docker compose --env-file .env --profile future up --build
 Для проверки только backend API без frontend:
 
 ```bash
-docker compose --env-file .env up -d postgres redis kafka auth-service notification-service api-gateway
+docker compose --env-file .env up -d postgres redis kafka auth-service inventory-service notification-service api-gateway
 ```
 
 Если app-сервисы запускаются локально через `go run`, а инфраструктура остается в Docker, Kafka broker должен быть:
@@ -80,7 +80,7 @@ Source of truth:
 ## Local bootstrap order
 
 1. Поднять `postgres`, `redis`, `kafka`
-2. Поднять `auth-service` и `notification-service`
+2. Поднять `auth-service`, `inventory-service` и `notification-service`
 3. Поднять `api-gateway`
 4. Опционально поднять `frontend`
 5. Позже добавить future profile сервисы
