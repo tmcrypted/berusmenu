@@ -31,6 +31,8 @@ Shared protobuf contracts for Berusmenu backend services.
 - `berusmenu.events.v1.EmailVerificationRequested`
 - `berusmenu.events.v1.ResponseCreated`
 
+All notification events carry `event_id` for at-least-once delivery deduplication.
+
 ## Tooling
 
 Source files:

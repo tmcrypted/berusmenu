@@ -21,16 +21,19 @@ flowchart TB
     Gateway --> Redis
     Communication --> Redis
 
-    Auth --> Kafka["Kafka"]
+    Auth --> Outbox["auth.outbox_events"]
+    Outbox --> Kafka["Kafka"]
     Matching --> Kafka
     Kafka --> Notification["notification-service"]
+    Notification --> Postgres
     Notification --> Email["Email sender"]
 ```
 
 ## Notes
 
 - `notification-service` is a background worker.
-- `notification-service` has no own DB in MVP.
+- `auth-service` publishes Kafka notification events through a service-owned transactional outbox.
+- `notification-service` owns the `notification` schema for processed event id deduplication.
 - WebSocket traffic terminates at gateway / communication edge.
 - Browser cookies terminate at `api-gateway`; downstream services receive identity metadata, not cookies.
 - Gateway allows credentialed CORS only for configured frontend origins.
@@ -57,9 +60,11 @@ flowchart TB
     Inventory --> Postgres
     Inventory -. active vacancy check .-> Matching
     Auth --> Redis["redis :6379"]
-    Auth --> Kafka["redpanda/kafka :9092"]
+    Auth --> Outbox["auth.outbox_events"]
+    Outbox --> Kafka["redpanda/kafka :9092"]
 
     Kafka --> Notification["notification-service"]
+    Notification --> Postgres
 ```
 
 Kafka listeners:

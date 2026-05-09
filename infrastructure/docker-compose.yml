@@ -126,6 +126,10 @@ services:
       POSTGRES_DSN: postgres://${POSTGRES_USER:-berusmenu}:${POSTGRES_PASSWORD:-berusmenu}@postgres:5432/${POSTGRES_DB:-berusmenu}?sslmode=disable
       REDIS_ADDR: redis:6379
       KAFKA_BROKERS: kafka:9092
+      OUTBOX_POLL_INTERVAL: ${OUTBOX_POLL_INTERVAL:-1s}
+      OUTBOX_BATCH_SIZE: ${OUTBOX_BATCH_SIZE:-50}
+      OUTBOX_RETRY_BACKOFF: ${OUTBOX_RETRY_BACKOFF:-1s}
+      OUTBOX_CLAIM_TIMEOUT: ${OUTBOX_CLAIM_TIMEOUT:-5m}
       JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-me}
       ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-15m}
       REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:-720h}
@@ -190,12 +194,17 @@ services:
     restart: unless-stopped
     environment:
       KAFKA_BROKERS: kafka:9092
+      POSTGRES_DSN: postgres://${POSTGRES_USER:-berusmenu}:${POSTGRES_PASSWORD:-berusmenu}@postgres:5432/${POSTGRES_DB:-berusmenu}?sslmode=disable
+      MIGRATIONS_DIR: internal/migrations
       AUTH_EMAIL_VERIFICATION_TOPIC: auth.email_verification_requested
       MATCHING_RESPONSE_CREATED_TOPIC: matching.response_created
       NOTIFICATION_RETRY_ATTEMPTS: ${NOTIFICATION_RETRY_ATTEMPTS:-3}
       NOTIFICATION_RETRY_BACKOFF: ${NOTIFICATION_RETRY_BACKOFF:-1s}
+      NOTIFICATION_PROCESSING_TIMEOUT: ${NOTIFICATION_PROCESSING_TIMEOUT:-5m}
     depends_on:
       kafka:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     networks:
       - berusmenu

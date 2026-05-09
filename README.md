@@ -42,7 +42,7 @@ Current `go.work` modules:
 Implemented:
 
 - `auth-service`: register/login/refresh/logout, JWT validation, `GET/PATCH /v1/me`, email verification, resend cooldown/lockout, timed user block through `blocked_until`.
-- `notification-service`: consumes `auth.email_verification_requested` and `matching.response_created`, uses retry-aware Kafka commit policy and a local email stub sender.
+- `notification-service`: consumes `auth.email_verification_requested` and `matching.response_created`, deduplicates by `event_id`, uses retry-aware Kafka commit policy and a local email stub sender.
 - `inventory-service`: create/read/list/update PVZ, moderation queue, approve/reject/block PVZ, owner-only access, moderator-only moderation, temporary matching dependency for active vacancy checks.
 - `api-gateway`: auth/profile routes, inventory routes, moderation routes, cookie/CSRF middleware, gRPC clients.
 - `frontend`: auth flow, email verification, profile completion, owner PVZ flow, moderator PVZ moderation panel, timed owner spam block action.
@@ -82,6 +82,7 @@ The current implemented slice covers backend and frontend up to PVZ moderation. 
 - Gateway forwards identity to internal gRPC calls through metadata.
 - Gateway stays thin; business rules live in owning services.
 - Kafka is used only for notification events in MVP.
+- Notification events are published through service-owned outbox tables.
 - Redis is used for verification, rate limiting and future realtime ephemeral state.
 
 ## Data Ownership
@@ -92,6 +93,7 @@ Schema: `auth`
 
 - `auth.users`
 - `auth.refresh_sessions`
+- `auth.outbox_events`
 
 `auth.users.blocked_until` supports temporary moderator blocks. While a block is active, login/refresh/JWT validation are denied. After `blocked_until` expires, the user can authenticate again without a manual unblock.
 
@@ -142,7 +144,11 @@ This service will own chat semantics.
 
 ### `notification-service`
 
-No PostgreSQL schema in MVP. It runs as a background worker.
+Schema: `notification`
+
+- `notification.processed_events`
+
+It runs as a background worker and stores processed event ids for idempotency.
 
 ## Runtime
 
@@ -212,6 +218,7 @@ Notification:
 ```powershell
 cd C:\Users\tmcrypted\Desktop\berusmenu\notification-service
 $env:KAFKA_BROKERS="localhost:19092"
+$env:POSTGRES_DSN="postgres://berusmenu:berusmenu@localhost:54320/berusmenu?sslmode=disable"
 go run .\cmd\notification-service
 ```
 
@@ -250,7 +257,7 @@ MVP topics:
 - `auth.email_verification_requested`
 - `matching.response_created`
 
-`notification-service` consumes both. Local delivery uses a log/stub sender.
+`auth-service` first persists verification events in `auth.outbox_events`, then an internal worker publishes them to Kafka. `notification-service` consumes both topics and deduplicates by `event_id`. Local delivery uses a log/stub sender.
 
 ## Redis Keys
 

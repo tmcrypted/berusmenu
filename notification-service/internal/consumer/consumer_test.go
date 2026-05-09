@@ -26,9 +26,10 @@ func TestProcessMessageCommitDecisions(t *testing.T) {
 		sender := &fakeSender{}
 		c := NewWithReader(cfg, notificationservice.New(sender), nil)
 		msg := kafka.Message{Topic: cfg.VerificationTopic, Value: mustMarshal(t, &eventsv1.EmailVerificationRequested{
-			UserId: 7,
-			Email:  "worker@example.com",
-			Code:   "123456",
+			EventId: "event-1",
+			UserId:  7,
+			Email:   "worker@example.com",
+			Code:    "123456",
 		})}
 
 		if !c.processMessage(context.Background(), msg) {
@@ -53,6 +54,7 @@ func TestProcessMessageCommitDecisions(t *testing.T) {
 		sender := &fakeSender{err: senderErr}
 		c := NewWithReader(cfg, notificationservice.New(sender), nil)
 		msg := kafka.Message{Topic: cfg.ResponseTopic, Value: mustMarshal(t, &eventsv1.ResponseCreated{
+			EventId:      "event-2",
 			ResponseId:   11,
 			VacancyId:    22,
 			OwnerUserId:  33,
@@ -65,6 +67,26 @@ func TestProcessMessageCommitDecisions(t *testing.T) {
 		}
 		if sender.responseCreatedCalls != cfg.RetryAttempts {
 			t.Fatalf("response calls = %d, want %d", sender.responseCreatedCalls, cfg.RetryAttempts)
+		}
+	})
+
+	t.Run("duplicate event commits without sending", func(t *testing.T) {
+		sender := &fakeSender{}
+		dedup := &fakeDedup{reserved: false}
+		c := NewWithReader(cfg, notificationservice.New(sender), nil)
+		c.dedup = dedup
+		msg := kafka.Message{Topic: cfg.VerificationTopic, Value: mustMarshal(t, &eventsv1.EmailVerificationRequested{
+			EventId: "event-3",
+			UserId:  7,
+			Email:   "worker@example.com",
+			Code:    "123456",
+		})}
+
+		if !c.processMessage(context.Background(), msg) {
+			t.Fatal("expected duplicate message to commit")
+		}
+		if sender.emailVerificationCalls != 0 {
+			t.Fatalf("email calls = %d, want 0", sender.emailVerificationCalls)
 		}
 	})
 }
@@ -85,6 +107,25 @@ func (s *fakeSender) SendResponseCreated(ctx context.Context, notification dto.R
 	_ = ctx
 	s.responseCreatedCalls++
 	return s.err
+}
+
+type fakeDedup struct {
+	reserved bool
+}
+
+func (d *fakeDedup) ReserveEvent(ctx context.Context, eventID string, eventType string, timeout time.Duration) (bool, error) {
+	_, _, _, _ = ctx, eventID, eventType, timeout
+	return d.reserved, nil
+}
+
+func (d *fakeDedup) MarkEventProcessed(ctx context.Context, eventID string) error {
+	_, _ = ctx, eventID
+	return nil
+}
+
+func (d *fakeDedup) ReleaseEvent(ctx context.Context, eventID string) error {
+	_, _ = ctx, eventID
+	return nil
 }
 
 func mustMarshal(t *testing.T, msg proto.Message) []byte {

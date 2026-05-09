@@ -50,7 +50,6 @@ func main() {
 
 	kafkaWriter := &kafka.Writer{
 		Addr:     kafka.TCP(cfg.KafkaBrokers...),
-		Topic:    cfg.VerificationTopic,
 		Balancer: &kafka.LeastBytes{},
 	}
 	defer kafkaWriter.Close()
@@ -60,11 +59,16 @@ func main() {
 		log.Fatalf("listen grpc: %v", err)
 	}
 
+	authStore := store.New(pool)
+	kafkaPublisher := events.NewKafkaPublisher(kafkaWriter, cfg)
+	outboxWorker := events.NewOutboxWorker(authStore, kafkaPublisher, cfg)
+	go outboxWorker.Run(ctx)
+
 	authServer := server.New(server.Dependencies{
 		Config:       cfg,
-		Users:        store.New(pool),
+		Users:        authStore,
 		Verification: verification.New(redisClient, cfg),
-		Publisher:    events.NewKafkaPublisher(kafkaWriter, cfg),
+		Publisher:    events.NewOutboxPublisher(authStore, cfg),
 	})
 
 	grpcServer := grpc.NewServer()

@@ -4,7 +4,9 @@
 
 Kafka is used only for notification events.
 
-`notification-service` commits Kafka offsets only after successful handling. Malformed protobuf or semantically invalid notification messages are logged and committed so they do not block a partition forever. Transient sender failures are retried with bounded backoff and are not committed after retries are exhausted.
+`auth-service` writes verification notification events to `auth.outbox_events` before Kafka publication. Its outbox worker publishes pending rows asynchronously, so Kafka downtime does not lose verification events.
+
+`notification-service` commits Kafka offsets only after successful handling. Malformed protobuf, missing `event_id`, or semantically invalid notification messages are logged and committed so they do not block a partition forever. Transient sender failures are retried with bounded backoff and are not committed after retries are exhausted. Duplicate `event_id` values are committed without sending duplicate email.
 
 ### Event: `auth.email_verification_requested`
 
@@ -19,6 +21,7 @@ Consumer:
 Payload:
 
 - `user_id`
+- `event_id`
 - `email`
 - `code`
 - `occurred_at`
@@ -42,6 +45,7 @@ Consumer:
 Payload:
 
 - `response_id`
+- `event_id`
 - `vacancy_id`
 - `owner_user_id`
 - `owner_email`

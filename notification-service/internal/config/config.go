@@ -9,21 +9,27 @@ import (
 
 type Config struct {
 	KafkaBrokers      []string
+	PostgresDSN       string
+	MigrationsDir     string
 	VerificationTopic string
 	ResponseTopic     string
 	ConsumerGroupID   string
 	RetryAttempts     int
 	RetryBackoff      time.Duration
+	ProcessingTimeout time.Duration
 }
 
 func Load() Config {
 	return Config{
 		KafkaBrokers:      splitCSV(getEnv("KAFKA_BROKERS", "localhost:9092")),
+		PostgresDSN:       getEnv("POSTGRES_DSN", "postgres://berusmenu:berusmenu@localhost:5432/berusmenu?sslmode=disable"),
+		MigrationsDir:     getEnv("MIGRATIONS_DIR", "internal/migrations"),
 		VerificationTopic: getEnv("AUTH_EMAIL_VERIFICATION_TOPIC", "auth.email_verification_requested"),
 		ResponseTopic:     getEnv("MATCHING_RESPONSE_CREATED_TOPIC", "matching.response_created"),
 		ConsumerGroupID:   getEnv("KAFKA_CONSUMER_GROUP_ID", "notification-service-group"),
 		RetryAttempts:     getIntEnv("NOTIFICATION_RETRY_ATTEMPTS", 3),
 		RetryBackoff:      getDurationEnv("NOTIFICATION_RETRY_BACKOFF", time.Second),
+		ProcessingTimeout: getDurationEnv("NOTIFICATION_PROCESSING_TIMEOUT", 5*time.Minute),
 	}
 }
 

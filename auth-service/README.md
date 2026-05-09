@@ -21,6 +21,7 @@ Tables:
 
 - `auth.users`
 - `auth.refresh_sessions`
+- `auth.outbox_events`
 
 Important `auth.users` fields:
 
@@ -61,6 +62,8 @@ Producer:
 
 Payload is defined in `proto/events/v1/notifications.proto`.
 
+Verification events are persisted to `auth.outbox_events` first. A local outbox worker publishes pending rows to Kafka with retry/backoff, so `Register` and `ResendVerificationCode` can succeed while Kafka or `notification-service` is temporarily unavailable.
+
 ## gRPC
 
 Implemented:
@@ -85,7 +88,7 @@ Implemented:
 - `internal/dto` - service-level DTOs.
 - `internal/store` - PostgreSQL adapter.
 - `internal/verification` - Redis verification adapter.
-- `internal/events` - Kafka producer.
+- `internal/events` - outbox event builder, Kafka publisher and outbox worker.
 - `internal/migrations` - service-owned SQL migrations.
 
 ## Local Run
@@ -98,6 +101,9 @@ $env:POSTGRES_DSN="postgres://berusmenu:berusmenu@localhost:54320/berusmenu?sslm
 $env:REDIS_ADDR="localhost:6379"
 $env:KAFKA_BROKERS="localhost:19092"
 $env:GRPC_ADDR=":50051"
+$env:OUTBOX_POLL_INTERVAL="1s"
+$env:OUTBOX_BATCH_SIZE="50"
+$env:OUTBOX_CLAIM_TIMEOUT="5m"
 go run .\cmd\auth-service
 ```
 
