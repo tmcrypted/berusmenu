@@ -4,6 +4,7 @@ use (
 	./api-gateway
 	./auth-service
 	./inventory-service
+	./matching-service
 	./notification-service
 	./proto
 )

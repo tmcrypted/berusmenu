@@ -106,3 +106,18 @@ func RequireVerified() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func RequireRole(role commonv1.UserRole) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, ok := GetCurrentUser(c)
+		if !ok {
+			response.Error(c, http.StatusUnauthorized, "unauthenticated", "missing authenticated user")
+			return
+		}
+		if user.Role != role {
+			response.Error(c, http.StatusForbidden, "permission_denied", "insufficient role")
+			return
+		}
+		c.Next()
+	}
+}

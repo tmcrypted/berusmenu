@@ -72,6 +72,18 @@
       "_type": "request_group"
     },
     {
+      "_id": "fld_matching",
+      "parentId": "wrk_berusmenu_api",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "name": "Matching",
+      "description": "Vacancy, response, assignment, review and reply requests.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 400,
+      "_type": "request_group"
+    },
+    {
       "_id": "req_health_live",
       "parentId": "fld_health",
       "modified": 1778083200000,
@@ -678,6 +690,601 @@
       ],
       "authentication": {},
       "metaSortKey": 900,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_create_vacancy",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/vacancies",
+      "name": "Create Vacancy",
+      "description": "Owner-only. Requires approved owner PVZ. shift_start_at and shift_end_at are ISO 8601 timestamps.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"pvz_id\": 1,\n  \"title\": \"PVZ shift\",\n  \"description\": \"Urgent shift\",\n  \"shift_start_at\": \"2026-05-10T09:00:00+03:00\",\n  \"shift_end_at\": \"2026-05-10T21:00:00+03:00\",\n  \"pay_amount\": 3000,\n  \"slots_total\": 1\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_list_vacancies",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/vacancies?status=published&pvz_id=1&shift_start_from=2026-05-10T00:00:00%2B03:00&shift_start_to=2026-05-11T00:00:00%2B03:00&page_size=20&page_token=0",
+      "name": "List Vacancies",
+      "description": "Role-aware listing: worker sees published, owner sees own, moderator sees all. Query examples cover status, pvz_id, shift_start_from, shift_start_to, page_size and page_token.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1010,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_create_response",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/vacancies/1/responses",
+      "name": "Create Response",
+      "description": "Worker-only response to a published vacancy.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"message\": \"I can take this shift\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1020,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_get_vacancy",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/vacancies/1",
+      "name": "Get Vacancy",
+      "description": "Returns one vacancy visible to the current role.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1015,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_list_responses_for_vacancy",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/vacancies/1/responses",
+      "name": "List Responses For Vacancy",
+      "description": "Owner/moderator list of all responses for a specific vacancy.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1025,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_withdraw_response",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/responses/1/withdraw",
+      "name": "Withdraw Response",
+      "description": "Worker withdraws own pending response before assignment.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1028,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_accept_response",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/responses/1/accept",
+      "name": "Accept Response",
+      "description": "Owner accepts one pending response and creates an assignment.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1030,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_cancel_assignment",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/assignments/1/cancel",
+      "name": "Cancel Assignment",
+      "description": "Owner or worker cancels active assignment.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"cancel_reason\": \"Worker is unavailable\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1035,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_complete_assignment",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/assignments/1/complete",
+      "name": "Complete Assignment",
+      "description": "Owner completes active assignment.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1038,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_create_review",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/assignments/1/reviews",
+      "name": "Create Review",
+      "description": "Creates a root review and recalculates the target user's matching rating aggregate.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"rating\": 5,\n  \"body\": \"Great shift partner\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1040,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_update_review",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/reviews/1",
+      "name": "Update Review",
+      "description": "Updates a root review body/rating and recalculates target user rating.",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"rating\": 4,\n  \"body\": \"Updated review text\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1045,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_list_reviews",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/reviews?target_user_id=1",
+      "name": "List Reviews",
+      "description": "Lists root reviews, optionally filtered by target_user_id.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1050,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_create_review_reply",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/reviews/1/replies",
+      "name": "Create Review Reply",
+      "description": "Adds a flat reply under a root review.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"target_user_id\": 1,\n  \"body\": \"Thanks for the review\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1060,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_list_review_replies",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/reviews/1/replies?page_size=20",
+      "name": "List Review Replies",
+      "description": "Lists flat replies under a root review sorted by created_at ASC.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1065,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_update_review_reply",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/review-replies/1",
+      "name": "Update Review Reply",
+      "description": "Updates a flat review reply body.",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"body\": \"Updated reply text\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1070,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_get_user_rating",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/users/1/rating",
+      "name": "Get User Rating",
+      "description": "Reads matching user rating aggregate from matching.user_ratings.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1075,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_moderation_list_vacancies",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/moderation/matching/vacancies",
+      "name": "Moderation List Matching Vacancies",
+      "description": "Moderator route shape for future moderation-service extraction.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1080,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_moderation_accept_response",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/moderation/matching/responses/1/accept",
+      "name": "Moderation Accept Response",
+      "description": "Moderator-only dispute action. Requires explicit reason and writes matching admin audit event atomically with assignment creation.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"reason\": \"Moderator dispute resolution\",\n  \"comment\": \"Owner is unavailable\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1085,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_moderation_cancel_assignment",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/moderation/matching/assignments/1/cancel",
+      "name": "Moderation Cancel Assignment",
+      "description": "Moderator dispute action. Writes matching admin audit event.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"reason\": \"Moderator dispute resolution\",\n  \"cancel_reason\": \"Worker is unavailable\",\n  \"comment\": \"Evidence checked\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1090,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_matching_moderation_complete_assignment",
+      "parentId": "fld_matching",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/moderation/matching/assignments/1/complete",
+      "name": "Moderation Complete Assignment",
+      "description": "Moderator-only dispute action. Requires explicit reason and writes matching admin audit event atomically with completion.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"reason\": \"Moderator dispute resolution\",\n  \"comment\": \"Shift completion confirmed\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-CSRF-Token",
+          "value": "{% cookie _.base_url, 'berusmenu_csrf' %}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1100,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,

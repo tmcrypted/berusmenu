@@ -198,6 +198,17 @@ func (s *Service) GetUser(ctx context.Context, input dto.GetUserInput) (store.Us
 	return user, nil
 }
 
+func (s *Service) GetUserByID(ctx context.Context, userID int64) (store.User, error) {
+	if userID <= 0 {
+		return store.User{}, serviceError(ErrInvalidArgument, "user_id is required")
+	}
+	user, err := s.users.GetUserByID(ctx, userID)
+	if err != nil {
+		return store.User{}, notFoundOrInternal(err, "user not found", "failed to get user")
+	}
+	return user, nil
+}
+
 func (s *Service) BlockUser(ctx context.Context, input dto.BlockUserInput) (store.User, error) {
 	if input.ActorUserID <= 0 {
 		return store.User{}, serviceError(ErrUnauthenticated, "missing authenticated user")

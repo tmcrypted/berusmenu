@@ -99,6 +99,9 @@ Rules:
 
 - `cancelled_by_user_id` required logically on cancel;
 - reviews are allowed after `completed` or `cancelled`.
+- owner completes active assignment;
+- owner or worker can cancel active assignment;
+- moderator can perform business-valid dispute actions through audited moderation routes.
 
 ## Chat State Rule
 

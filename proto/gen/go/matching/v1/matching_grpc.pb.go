@@ -30,8 +30,12 @@ const (
 	MatchingService_CancelAssignment_FullMethodName          = "/berusmenu.matching.v1.MatchingService/CancelAssignment"
 	MatchingService_CompleteAssignment_FullMethodName        = "/berusmenu.matching.v1.MatchingService/CompleteAssignment"
 	MatchingService_CreateReview_FullMethodName              = "/berusmenu.matching.v1.MatchingService/CreateReview"
+	MatchingService_UpdateReview_FullMethodName              = "/berusmenu.matching.v1.MatchingService/UpdateReview"
 	MatchingService_CreateReviewReply_FullMethodName         = "/berusmenu.matching.v1.MatchingService/CreateReviewReply"
+	MatchingService_UpdateReviewReply_FullMethodName         = "/berusmenu.matching.v1.MatchingService/UpdateReviewReply"
+	MatchingService_ListReviewReplies_FullMethodName         = "/berusmenu.matching.v1.MatchingService/ListReviewReplies"
 	MatchingService_ListReviews_FullMethodName               = "/berusmenu.matching.v1.MatchingService/ListReviews"
+	MatchingService_GetUserRating_FullMethodName             = "/berusmenu.matching.v1.MatchingService/GetUserRating"
 	MatchingService_HasActiveVacancyForPvz_FullMethodName    = "/berusmenu.matching.v1.MatchingService/HasActiveVacancyForPvz"
 	MatchingService_CheckResponseChatWritable_FullMethodName = "/berusmenu.matching.v1.MatchingService/CheckResponseChatWritable"
 )
@@ -51,8 +55,12 @@ type MatchingServiceClient interface {
 	CancelAssignment(ctx context.Context, in *CancelAssignmentRequest, opts ...grpc.CallOption) (*CancelAssignmentResponse, error)
 	CompleteAssignment(ctx context.Context, in *CompleteAssignmentRequest, opts ...grpc.CallOption) (*CompleteAssignmentResponse, error)
 	CreateReview(ctx context.Context, in *CreateReviewRequest, opts ...grpc.CallOption) (*CreateReviewResponse, error)
+	UpdateReview(ctx context.Context, in *UpdateReviewRequest, opts ...grpc.CallOption) (*UpdateReviewResponse, error)
 	CreateReviewReply(ctx context.Context, in *CreateReviewReplyRequest, opts ...grpc.CallOption) (*CreateReviewReplyResponse, error)
+	UpdateReviewReply(ctx context.Context, in *UpdateReviewReplyRequest, opts ...grpc.CallOption) (*UpdateReviewReplyResponse, error)
+	ListReviewReplies(ctx context.Context, in *ListReviewRepliesRequest, opts ...grpc.CallOption) (*ListReviewRepliesResponse, error)
 	ListReviews(ctx context.Context, in *ListReviewsRequest, opts ...grpc.CallOption) (*ListReviewsResponse, error)
+	GetUserRating(ctx context.Context, in *GetUserRatingRequest, opts ...grpc.CallOption) (*GetUserRatingResponse, error)
 	HasActiveVacancyForPvz(ctx context.Context, in *HasActiveVacancyForPvzRequest, opts ...grpc.CallOption) (*HasActiveVacancyForPvzResponse, error)
 	CheckResponseChatWritable(ctx context.Context, in *CheckResponseChatWritableRequest, opts ...grpc.CallOption) (*CheckResponseChatWritableResponse, error)
 }
@@ -175,6 +183,16 @@ func (c *matchingServiceClient) CreateReview(ctx context.Context, in *CreateRevi
 	return out, nil
 }
 
+func (c *matchingServiceClient) UpdateReview(ctx context.Context, in *UpdateReviewRequest, opts ...grpc.CallOption) (*UpdateReviewResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateReviewResponse)
+	err := c.cc.Invoke(ctx, MatchingService_UpdateReview_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *matchingServiceClient) CreateReviewReply(ctx context.Context, in *CreateReviewReplyRequest, opts ...grpc.CallOption) (*CreateReviewReplyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateReviewReplyResponse)
@@ -185,10 +203,40 @@ func (c *matchingServiceClient) CreateReviewReply(ctx context.Context, in *Creat
 	return out, nil
 }
 
+func (c *matchingServiceClient) UpdateReviewReply(ctx context.Context, in *UpdateReviewReplyRequest, opts ...grpc.CallOption) (*UpdateReviewReplyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateReviewReplyResponse)
+	err := c.cc.Invoke(ctx, MatchingService_UpdateReviewReply_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *matchingServiceClient) ListReviewReplies(ctx context.Context, in *ListReviewRepliesRequest, opts ...grpc.CallOption) (*ListReviewRepliesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListReviewRepliesResponse)
+	err := c.cc.Invoke(ctx, MatchingService_ListReviewReplies_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *matchingServiceClient) ListReviews(ctx context.Context, in *ListReviewsRequest, opts ...grpc.CallOption) (*ListReviewsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListReviewsResponse)
 	err := c.cc.Invoke(ctx, MatchingService_ListReviews_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *matchingServiceClient) GetUserRating(ctx context.Context, in *GetUserRatingRequest, opts ...grpc.CallOption) (*GetUserRatingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserRatingResponse)
+	err := c.cc.Invoke(ctx, MatchingService_GetUserRating_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -230,8 +278,12 @@ type MatchingServiceServer interface {
 	CancelAssignment(context.Context, *CancelAssignmentRequest) (*CancelAssignmentResponse, error)
 	CompleteAssignment(context.Context, *CompleteAssignmentRequest) (*CompleteAssignmentResponse, error)
 	CreateReview(context.Context, *CreateReviewRequest) (*CreateReviewResponse, error)
+	UpdateReview(context.Context, *UpdateReviewRequest) (*UpdateReviewResponse, error)
 	CreateReviewReply(context.Context, *CreateReviewReplyRequest) (*CreateReviewReplyResponse, error)
+	UpdateReviewReply(context.Context, *UpdateReviewReplyRequest) (*UpdateReviewReplyResponse, error)
+	ListReviewReplies(context.Context, *ListReviewRepliesRequest) (*ListReviewRepliesResponse, error)
 	ListReviews(context.Context, *ListReviewsRequest) (*ListReviewsResponse, error)
+	GetUserRating(context.Context, *GetUserRatingRequest) (*GetUserRatingResponse, error)
 	HasActiveVacancyForPvz(context.Context, *HasActiveVacancyForPvzRequest) (*HasActiveVacancyForPvzResponse, error)
 	CheckResponseChatWritable(context.Context, *CheckResponseChatWritableRequest) (*CheckResponseChatWritableResponse, error)
 	mustEmbedUnimplementedMatchingServiceServer()
@@ -274,11 +326,23 @@ func (UnimplementedMatchingServiceServer) CompleteAssignment(context.Context, *C
 func (UnimplementedMatchingServiceServer) CreateReview(context.Context, *CreateReviewRequest) (*CreateReviewResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateReview not implemented")
 }
+func (UnimplementedMatchingServiceServer) UpdateReview(context.Context, *UpdateReviewRequest) (*UpdateReviewResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateReview not implemented")
+}
 func (UnimplementedMatchingServiceServer) CreateReviewReply(context.Context, *CreateReviewReplyRequest) (*CreateReviewReplyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateReviewReply not implemented")
 }
+func (UnimplementedMatchingServiceServer) UpdateReviewReply(context.Context, *UpdateReviewReplyRequest) (*UpdateReviewReplyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateReviewReply not implemented")
+}
+func (UnimplementedMatchingServiceServer) ListReviewReplies(context.Context, *ListReviewRepliesRequest) (*ListReviewRepliesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListReviewReplies not implemented")
+}
 func (UnimplementedMatchingServiceServer) ListReviews(context.Context, *ListReviewsRequest) (*ListReviewsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListReviews not implemented")
+}
+func (UnimplementedMatchingServiceServer) GetUserRating(context.Context, *GetUserRatingRequest) (*GetUserRatingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserRating not implemented")
 }
 func (UnimplementedMatchingServiceServer) HasActiveVacancyForPvz(context.Context, *HasActiveVacancyForPvzRequest) (*HasActiveVacancyForPvzResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HasActiveVacancyForPvz not implemented")
@@ -497,6 +561,24 @@ func _MatchingService_CreateReview_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MatchingService_UpdateReview_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateReviewRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchingServiceServer).UpdateReview(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchingService_UpdateReview_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchingServiceServer).UpdateReview(ctx, req.(*UpdateReviewRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _MatchingService_CreateReviewReply_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateReviewReplyRequest)
 	if err := dec(in); err != nil {
@@ -515,6 +597,42 @@ func _MatchingService_CreateReviewReply_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MatchingService_UpdateReviewReply_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateReviewReplyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchingServiceServer).UpdateReviewReply(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchingService_UpdateReviewReply_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchingServiceServer).UpdateReviewReply(ctx, req.(*UpdateReviewReplyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MatchingService_ListReviewReplies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListReviewRepliesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchingServiceServer).ListReviewReplies(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchingService_ListReviewReplies_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchingServiceServer).ListReviewReplies(ctx, req.(*ListReviewRepliesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _MatchingService_ListReviews_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListReviewsRequest)
 	if err := dec(in); err != nil {
@@ -529,6 +647,24 @@ func _MatchingService_ListReviews_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MatchingServiceServer).ListReviews(ctx, req.(*ListReviewsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MatchingService_GetUserRating_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserRatingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchingServiceServer).GetUserRating(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchingService_GetUserRating_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchingServiceServer).GetUserRating(ctx, req.(*GetUserRatingRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -621,12 +757,28 @@ var MatchingService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _MatchingService_CreateReview_Handler,
 		},
 		{
+			MethodName: "UpdateReview",
+			Handler:    _MatchingService_UpdateReview_Handler,
+		},
+		{
 			MethodName: "CreateReviewReply",
 			Handler:    _MatchingService_CreateReviewReply_Handler,
 		},
 		{
+			MethodName: "UpdateReviewReply",
+			Handler:    _MatchingService_UpdateReviewReply_Handler,
+		},
+		{
+			MethodName: "ListReviewReplies",
+			Handler:    _MatchingService_ListReviewReplies_Handler,
+		},
+		{
 			MethodName: "ListReviews",
 			Handler:    _MatchingService_ListReviews_Handler,
+		},
+		{
+			MethodName: "GetUserRating",
+			Handler:    _MatchingService_GetUserRating_Handler,
 		},
 		{
 			MethodName: "HasActiveVacancyForPvz",

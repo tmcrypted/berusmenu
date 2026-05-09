@@ -51,19 +51,28 @@ Remaining inventory-adjacent work:
 
 ## Phase 4. Matching
 
-Status: planned / next major backend service.
+Status: backend slice implemented.
 
-Implement `matching-service`:
+Implemented:
 
-1. migrations for `matching.vacancies`, `matching.responses`, `matching.assignments`, `matching.reviews`, `matching.review_replies`;
-2. vacancy create/list/get flows;
-3. owner vacancy list;
-4. response create/withdraw/list/accept;
-5. assignment create/cancel/complete;
-6. reviews and review replies;
-7. `HasActiveVacancyForPvz`;
-8. `CheckResponseChatWritable`;
-9. Kafka publish for `matching.response_created`.
+- runnable `matching-service` module;
+- migrations for vacancies, responses, assignments, reviews, review replies, rating aggregates, outbox and admin audit;
+- vacancy create/list/get flows;
+- role-aware vacancy listing;
+- response create/withdraw/list/accept;
+- assignment cancel/complete;
+- reviews and review replies with edit support;
+- synchronous user rating aggregate recalculation after root review create/update;
+- `HasActiveVacancyForPvz`;
+- `CheckResponseChatWritable`;
+- transactional outbox for `matching.response_created`;
+- gateway matching routes and future-extractable moderation route shape.
+
+Remaining:
+
+- focused matching service/store tests;
+- end-to-end inventory active-vacancy guard test;
+- real conversation creation after `communication-service` is implemented.
 
 ## Phase 5. Communication
 

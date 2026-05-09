@@ -38,6 +38,11 @@ Producer:
 
 - `matching-service`
 
+Producer behavior:
+
+- response creation and `matching.response_created` outbox insert happen in one database transaction;
+- an outbox worker publishes pending matching events to Kafka.
+
 Consumer:
 
 - `notification-service`

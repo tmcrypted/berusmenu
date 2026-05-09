@@ -22,6 +22,7 @@ Current `go.work` modules:
 - `api-gateway`
 - `auth-service`
 - `inventory-service`
+- `matching-service`
 - `notification-service`
 
 ## Repository Structure
@@ -29,7 +30,7 @@ Current `go.work` modules:
 - `api-gateway` - public HTTP API, cookie auth, CSRF, REST to gRPC mapping.
 - `auth-service` - accounts, sessions, JWT, email verification, profile, timed user block.
 - `inventory-service` - PVZ records, moderation statuses, moderation history, owner checks.
-- `matching-service` - planned service for vacancy/response/assignment/review.
+- `matching-service` - vacancy, response, assignment, review, rating and matching moderation workflow.
 - `communication-service` - planned service for conversations/messages/read state.
 - `notification-service` - Kafka consumer and email notification delivery.
 - `proto` - protobuf contracts and shared enums.
@@ -44,12 +45,12 @@ Implemented:
 - `auth-service`: register/login/refresh/logout, JWT validation, `GET/PATCH /v1/me`, email verification, resend cooldown/lockout, timed user block through `blocked_until`.
 - `notification-service`: consumes `auth.email_verification_requested` and `matching.response_created`, deduplicates by `event_id`, uses retry-aware Kafka commit policy and a local email stub sender.
 - `inventory-service`: create/read/list/update PVZ, moderation queue, approve/reject/block PVZ, owner-only access, moderator-only moderation, temporary matching dependency for active vacancy checks.
+- `matching-service`: vacancy create/list/get, response create/withdraw/list/accept, assignment cancel/complete, reviews/replies, rating aggregates, active vacancy and chat writability checks, response notification outbox.
 - `api-gateway`: auth/profile routes, inventory routes, moderation routes, cookie/CSRF middleware, gRPC clients.
 - `frontend`: auth flow, email verification, profile completion, owner PVZ flow, moderator PVZ moderation panel, timed owner spam block action.
 
 Not implemented as runnable services yet:
 
-- `matching-service`
 - `communication-service`
 
 They already have protobuf outlines, architecture rules and Docker future-profile placeholders.

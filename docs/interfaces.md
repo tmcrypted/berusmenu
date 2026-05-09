@@ -41,30 +41,44 @@ Web auth transport:
 
 The last endpoint orchestrates two owning services: timed user block in `auth-service`, then owner PVZ cleanup in `inventory-service`.
 
-## Planned REST
+### Matching Flow
 
-### Vacancies
+Vacancies:
 
 - `POST /v1/vacancies`
 - `GET /v1/vacancies`
 - `GET /v1/vacancies/{id}`
 
-### Responses
+Responses:
 
 - `POST /v1/vacancies/{id}/responses`
+- `GET /v1/vacancies/{id}/responses`
 - `POST /v1/responses/{id}/withdraw`
 - `POST /v1/responses/{id}/accept`
 
-### Assignments
+Assignments:
 
 - `POST /v1/assignments/{id}/cancel`
 - `POST /v1/assignments/{id}/complete`
 
-### Reviews
+Reviews:
 
 - `POST /v1/assignments/{id}/reviews`
 - `GET /v1/reviews`
+- `PATCH /v1/reviews/{id}`
 - `POST /v1/reviews/{id}/replies`
+- `GET /v1/reviews/{id}/replies`
+- `PATCH /v1/review-replies/{id}`
+- `GET /v1/users/{id}/rating`
+
+Matching moderation:
+
+- `GET /v1/moderation/matching/vacancies`
+- `POST /v1/moderation/matching/responses/{id}/accept`
+- `POST /v1/moderation/matching/assignments/{id}/cancel`
+- `POST /v1/moderation/matching/assignments/{id}/complete`
+
+## Planned REST
 
 ### Chat
 
@@ -111,7 +125,7 @@ Implemented:
 
 ### MatchingService
 
-Planned:
+Implemented:
 
 - `CreateVacancy`
 - `ListVacancies`
@@ -124,10 +138,28 @@ Planned:
 - `CancelAssignment`
 - `CompleteAssignment`
 - `CreateReview`
+- `UpdateReview`
 - `CreateReviewReply`
+- `UpdateReviewReply`
 - `ListReviews`
+- `ListReviewReplies`
+- `GetUserRating`
 - `HasActiveVacancyForPvz`
 - `CheckResponseChatWritable`
+
+Vacancy create/list uses full timestamp fields:
+
+- `shift_start_at`
+- `shift_end_at`
+- list filters `shift_start_from` / `shift_start_to`
+
+`GET /v1/vacancies` is role-aware:
+
+- worker sees published vacancies;
+- owner sees own vacancies;
+- moderator sees all vacancies.
+
+Moderator matching HTTP routes are exposed under `/v1/moderation/matching/...` for future extraction. Gateway applies a moderator-only gate, and MVP execution remains inside `matching-service`.
 
 ### CommunicationService
 
