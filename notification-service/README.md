@@ -2,7 +2,7 @@
 
 `notification-service` is a background worker for notification delivery.
 
-It has no public HTTP/gRPC API and no PostgreSQL schema in MVP.
+It has no public HTTP/gRPC API. It owns the `notification` PostgreSQL schema for idempotent event processing.
 
 ## Responsibility
 
@@ -23,6 +23,15 @@ It has no public HTTP/gRPC API and no PostgreSQL schema in MVP.
 - Malformed protobuf and semantically invalid messages are logged and committed so a partition is not blocked forever.
 - Transient sender failures are retried with bounded backoff.
 - If retries are exhausted, the offset is not committed.
+- Events require `event_id`; duplicate `event_id` values are committed without sending duplicate email.
+
+## Owned Schema
+
+Schema: `notification`
+
+Tables:
+
+- `notification.processed_events`
 
 ## Delivery Channel
 
@@ -42,6 +51,8 @@ Planned:
 - `internal/service` - notification handling and email sender abstraction.
 - `internal/dto` - service-level notification models.
 - `internal/config` - env parsing.
+- `internal/store` - PostgreSQL idempotency adapter.
+- `internal/migrations` - service-owned SQL migrations.
 
 ## Local Run
 
@@ -50,6 +61,7 @@ From service root:
 ```powershell
 cd C:\Users\tmcrypted\Desktop\berusmenu\notification-service
 $env:KAFKA_BROKERS="localhost:19092"
+$env:POSTGRES_DSN="postgres://berusmenu:berusmenu@localhost:54320/berusmenu?sslmode=disable"
 go run .\cmd\notification-service
 ```
 
@@ -57,6 +69,7 @@ Inside compose use:
 
 ```text
 KAFKA_BROKERS=kafka:9092
+POSTGRES_DSN=postgres://berusmenu:berusmenu@postgres:5432/berusmenu?sslmode=disable
 ```
 
 ## Tests

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -18,12 +19,19 @@ type Consumer struct {
 	reader  messageReader
 	cfg     config.Config
 	service *notificationservice.Service
+	dedup   EventDeduplicator
 }
 
 type messageReader interface {
 	FetchMessage(ctx context.Context) (kafka.Message, error)
 	CommitMessages(ctx context.Context, msgs ...kafka.Message) error
 	Close() error
+}
+
+type EventDeduplicator interface {
+	ReserveEvent(ctx context.Context, eventID string, eventType string, timeout time.Duration) (bool, error)
+	MarkEventProcessed(ctx context.Context, eventID string) error
+	ReleaseEvent(ctx context.Context, eventID string) error
 }
 
 func New(cfg config.Config, service *notificationservice.Service) *Consumer {
@@ -44,6 +52,21 @@ func NewWithReader(cfg config.Config, service *notificationservice.Service, read
 		cfg:     cfg,
 		service: service,
 	}
+}
+
+func NewWithDeduplicator(cfg config.Config, service *notificationservice.Service, reader messageReader, dedup EventDeduplicator) *Consumer {
+	if reader == nil {
+		reader = kafka.NewReader(kafka.ReaderConfig{
+			Brokers:     cfg.KafkaBrokers,
+			GroupID:     cfg.ConsumerGroupID,
+			GroupTopics: []string{cfg.VerificationTopic, cfg.ResponseTopic},
+			MinBytes:    10e3,
+			MaxBytes:    10e6,
+		})
+	}
+	c := NewWithReader(cfg, service, reader)
+	c.dedup = dedup
+	return c
 }
 
 func (c *Consumer) Run(ctx context.Context) error {
@@ -97,8 +120,12 @@ func (c *Consumer) handleEmailVerification(ctx context.Context, m kafka.Message)
 		log.Printf("failed to unmarshal message at offset %d: %v", m.Offset, err)
 		return notificationservice.ErrInvalidNotification
 	}
+	if strings.TrimSpace(event.EventId) == "" {
+		log.Printf("missing event_id at topic %s offset %d", m.Topic, m.Offset)
+		return notificationservice.ErrInvalidNotification
+	}
 
-	return c.withRetry(ctx, func() error {
+	return c.processOnce(ctx, event.EventId, "berusmenu.events.v1.EmailVerificationRequested", func() error {
 		return c.service.HandleEmailVerificationRequested(ctx, dto.EmailVerificationRequested{
 			UserID: event.UserId,
 			Email:  event.Email,
@@ -113,8 +140,12 @@ func (c *Consumer) handleResponseCreated(ctx context.Context, m kafka.Message) e
 		log.Printf("failed to unmarshal message at offset %d: %v", m.Offset, err)
 		return notificationservice.ErrInvalidNotification
 	}
+	if strings.TrimSpace(event.EventId) == "" {
+		log.Printf("missing event_id at topic %s offset %d", m.Topic, m.Offset)
+		return notificationservice.ErrInvalidNotification
+	}
 
-	return c.withRetry(ctx, func() error {
+	return c.processOnce(ctx, event.EventId, "berusmenu.events.v1.ResponseCreated", func() error {
 		return c.service.HandleResponseCreated(ctx, dto.ResponseCreated{
 			ResponseID:   event.ResponseId,
 			VacancyID:    event.VacancyId,
@@ -126,6 +157,28 @@ func (c *Consumer) handleResponseCreated(ctx context.Context, m kafka.Message) e
 			PayAmount:    event.PayAmount,
 		})
 	})
+}
+
+func (c *Consumer) processOnce(ctx context.Context, eventID string, eventType string, fn func() error) error {
+	if c.dedup == nil {
+		return c.withRetry(ctx, fn)
+	}
+	reserved, err := c.dedup.ReserveEvent(ctx, eventID, eventType, c.cfg.ProcessingTimeout)
+	if err != nil {
+		return err
+	}
+	if !reserved {
+		log.Printf("duplicate notification event ignored event_id=%s event_type=%s", eventID, eventType)
+		return nil
+	}
+
+	if err := c.withRetry(ctx, fn); err != nil {
+		if releaseErr := c.dedup.ReleaseEvent(ctx, eventID); releaseErr != nil {
+			log.Printf("failed to release notification event reservation event_id=%s: %v", eventID, releaseErr)
+		}
+		return err
+	}
+	return c.dedup.MarkEventProcessed(ctx, eventID)
 }
 
 func (c *Consumer) withRetry(ctx context.Context, fn func() error) error {

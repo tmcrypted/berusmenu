@@ -68,6 +68,7 @@ Planned:
 
 - `users`
 - `refresh_sessions`
+- `outbox_events`
 
 `users.blocked_until` supports temporary moderator blocks.
 
@@ -93,6 +94,10 @@ Planned:
 - `conversations`
 - `messages`
 - `message_reads`
+
+### `notification`
+
+- `processed_events`
 
 ## Core Rules
 
@@ -126,6 +131,8 @@ Consumer:
 
 Delivery:
 
+- producers persist notification events to service-owned outbox tables before Kafka publish;
+- notification events include `event_id` for idempotent processing;
 - email only in MVP;
 - local log/stub sender now;
 - production provider later.

@@ -91,6 +91,7 @@ Current implemented migration sources:
 
 - `auth-service/internal/migrations`
 - `inventory-service/internal/migrations`
+- `notification-service/internal/migrations`
 
 Planned migration sources:
 
@@ -117,5 +118,7 @@ This keeps `internal/migrations` resolvable.
 - Local web auth uses credentialed CORS from `http://localhost:3000` to `http://localhost:8080`.
 - Production must set `COOKIE_SECURE=true` and serve over HTTPS.
 - Redpanda exposes `kafka:9092` inside compose and `localhost:19092` to the host.
-- `notification-service` is a background worker and has no PostgreSQL schema in MVP.
+- `auth-service` persists notification events to `auth.outbox_events`; its outbox worker publishes them to Kafka asynchronously.
+- Local compose starts `auth-service` after healthy Kafka; runtime Kafka downtime grows the outbox backlog instead of losing events.
+- `notification-service` is a background worker and uses the `notification` PostgreSQL schema to deduplicate processed event IDs.
 - Redis is used for verification, rate limiting and future realtime ephemeral state.

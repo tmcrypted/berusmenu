@@ -23,9 +23,11 @@ flowchart LR
     GW --> R
     COMM --> R
 
-    AUTH --> K["Kafka"]
+    AUTH --> OUTBOX["auth.outbox_events"]
+    OUTBOX --> K["Kafka"]
     MATCH --> K
     K --> NOTIF["notification-service"]
+    NOTIF --> PG
     NOTIF --> MAIL["Email sender"]
 ```
 
@@ -45,6 +47,7 @@ flowchart LR
 - Gateway stays thin; business rules live in owning services.
 - Core business transactions are synchronous.
 - Kafka is used only for notification events in MVP.
+- Notification producers persist events to their own outbox before Kafka publish.
 - Redis is used for verification/rate limiting/realtime ephemeral state.
 - One Postgres database, separate schema per service.
 
@@ -52,10 +55,9 @@ flowchart LR
 
 - `auth`
 - `inventory`
+- `notification`
 - `matching` planned
 - `communication` planned
-
-`notification-service` has no own schema in MVP.
 
 ## Boundaries
 
@@ -136,6 +138,7 @@ Asynchronous:
 - no public API;
 - background worker;
 - consumes Kafka;
+- deduplicates processed events by `event_id`;
 - dispatches email notifications.
 
 ## External Integrations

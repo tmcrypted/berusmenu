@@ -21,6 +21,7 @@ WORKDIR /app
 RUN addgroup -S app && adduser -S -G app app
 
 COPY --from=builder /out/notification-service /usr/local/bin/notification-service
+COPY notification-service/internal/migrations ./internal/migrations
 
 USER app
 

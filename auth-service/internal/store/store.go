@@ -2,9 +2,11 @@ package store
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -39,6 +41,24 @@ type User struct {
 	BlockedUntil    *time.Time
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+}
+
+type OutboxEvent struct {
+	ID        int64
+	EventID   string
+	Topic     string
+	EventType string
+	EventKey  string
+	Payload   []byte
+	Attempts  int
+}
+
+type OutboxEventInput struct {
+	EventID   string
+	Topic     string
+	EventType string
+	EventKey  string
+	Payload   []byte
 }
 
 func New(pool *pgxpool.Pool) *Store {
@@ -247,6 +267,100 @@ func (s *Store) BlockUser(ctx context.Context, userID int64, blockedUntil time.T
 	return scanUser(s.pool.QueryRow(ctx, sql, args...))
 }
 
+func (s *Store) EnqueueOutboxEvent(ctx context.Context, input OutboxEventInput) error {
+	eventID := strings.TrimSpace(input.EventID)
+	if eventID == "" {
+		var err error
+		eventID, err = NewEventID()
+		if err != nil {
+			return err
+		}
+	}
+	sql, args, err := psql.Insert("auth.outbox_events").
+		Columns("event_id", "topic", "event_type", "event_key", "payload").
+		Values(eventID, input.Topic, input.EventType, input.EventKey, input.Payload).
+		ToSql()
+	if err != nil {
+		return err
+	}
+	_, err = s.pool.Exec(ctx, sql, args...)
+	return err
+}
+
+func (s *Store) ClaimPendingOutboxEvents(ctx context.Context, limit int, claimTimeout time.Duration) ([]OutboxEvent, error) {
+	if limit < 1 {
+		limit = 1
+	}
+	if claimTimeout <= 0 {
+		claimTimeout = 5 * time.Minute
+	}
+	sql := `
+UPDATE auth.outbox_events
+SET status = 'processing',
+    available_at = NOW() + ($2 * INTERVAL '1 second')
+WHERE id IN (
+	SELECT id
+	FROM auth.outbox_events
+	WHERE status IN ('pending', 'processing') AND available_at <= NOW()
+	ORDER BY id
+	LIMIT $1
+	FOR UPDATE SKIP LOCKED
+)
+RETURNING id, event_id, topic, event_type, event_key, payload, attempts`
+
+	rows, err := s.pool.Query(ctx, sql, limit, int64(claimTimeout.Seconds()))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	events := make([]OutboxEvent, 0, limit)
+	for rows.Next() {
+		var event OutboxEvent
+		if err := rows.Scan(&event.ID, &event.EventID, &event.Topic, &event.EventType, &event.EventKey, &event.Payload, &event.Attempts); err != nil {
+			return nil, err
+		}
+		events = append(events, event)
+	}
+	return events, rows.Err()
+}
+
+func (s *Store) MarkOutboxEventPublished(ctx context.Context, id int64) error {
+	sql, args, err := psql.Update("auth.outbox_events").
+		Set("status", "published").
+		Set("published_at", sq.Expr("NOW()")).
+		Set("last_error", nil).
+		Where(sq.Eq{"id": id}).
+		ToSql()
+	if err != nil {
+		return err
+	}
+	_, err = s.pool.Exec(ctx, sql, args...)
+	return err
+}
+
+func (s *Store) MarkOutboxEventFailed(ctx context.Context, id int64, cause error, retryBackoff time.Duration) error {
+	if retryBackoff <= 0 {
+		retryBackoff = time.Second
+	}
+	message := ""
+	if cause != nil {
+		message = cause.Error()
+	}
+	sql, args, err := psql.Update("auth.outbox_events").
+		Set("status", "pending").
+		Set("attempts", sq.Expr("attempts + 1")).
+		Set("available_at", time.Now().Add(retryBackoff)).
+		Set("last_error", message).
+		Where(sq.Eq{"id": id}).
+		ToSql()
+	if err != nil {
+		return err
+	}
+	_, err = s.pool.Exec(ctx, sql, args...)
+	return err
+}
+
 func scanUser(row pgx.Row) (User, error) {
 	var user User
 	var role string
@@ -322,6 +436,16 @@ func activeRefreshSessionUserSelect(refreshToken string, forUpdate bool) sq.Sele
 func HashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
+}
+
+func NewEventID() (string, error) {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", err
+	}
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16]), nil
 }
 
 func NormalizeEmail(email string) string {
