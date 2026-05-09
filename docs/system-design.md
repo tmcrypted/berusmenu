@@ -28,7 +28,7 @@ Implemented:
 
 Planned:
 
-- matching backend/frontend;
+- matching frontend;
 - communication backend/frontend;
 - reviews UI;
 - production email provider.
@@ -117,6 +117,8 @@ Planned:
 - Reviews are allowed after `completed` or `cancelled`.
 - Replies belong only to root reviews and have one nesting level.
 - Chat is read-only after assignment finalization.
+- User rating aggregates are derived from matching root reviews and stored in `matching.user_ratings`.
+- Moderator matching routes are shaped for future extraction, but state changes remain in the owning matching service.
 
 ## Async Rules
 

@@ -509,21 +509,35 @@ Success `200`:
 
 Possible errors: `400`, `401`, `403`, `404`, `412`, `500`.
 
-## Placeholder Endpoints
+## Matching
 
-These routes are registered in the gateway but currently return:
+All matching routes require access cookie auth and verified email. Unsafe methods require `X-CSRF-Token`.
+
+Vacancy shift windows use ISO 8601 timestamps:
 
 ```json
 {
-  "error": {
-    "code": "not_implemented",
-    "message": "... gateway routes are not implemented yet",
-    "request_id": "req-123"
-  }
+  "shift_start_at": "2026-05-10T09:00:00+03:00",
+  "shift_end_at": "2026-05-10T21:00:00+03:00"
 }
 ```
 
-Matching:
+`GET /v1/vacancies` is role-aware:
+
+- worker sees published vacancies;
+- owner sees own vacancies;
+- moderator sees all vacancies.
+
+Supported query parameters for `GET /v1/vacancies`:
+
+- `status`: optional, one of `published`, `assigned`, `completed`, `cancelled`; invalid values return `400 invalid_argument`.
+- `pvz_id`: optional positive id.
+- `shift_start_from`: optional ISO 8601 timestamp.
+- `shift_start_to`: optional ISO 8601 timestamp.
+- `page_size`: optional, default service limit, max service limit.
+- `page_token`: optional numeric offset token.
+
+Implemented public matching routes:
 
 - `POST /v1/vacancies`
 - `GET /v1/vacancies`
@@ -535,8 +549,64 @@ Matching:
 - `POST /v1/assignments/:id/cancel`
 - `POST /v1/assignments/:id/complete`
 - `POST /v1/assignments/:id/reviews`
+- `PATCH /v1/reviews/:id`
 - `GET /v1/reviews`
 - `POST /v1/reviews/:id/replies`
+- `GET /v1/reviews/:id/replies`
+- `PATCH /v1/review-replies/:id`
+- `GET /v1/users/:id/rating`
+
+### `POST /v1/moderation/matching/responses/{id}/accept`
+
+Moderator-only dispute action. Accepts a pending response, creates the assignment, and writes `matching.admin_events` in the same matching transaction.
+
+Request:
+
+```json
+{
+  "reason": "Moderator dispute resolution",
+  "comment": "Owner is unavailable"
+}
+```
+
+`reason` is required. `comment` is accepted by the HTTP DTO for future moderation-service extraction.
+
+### `POST /v1/moderation/matching/assignments/{id}/cancel`
+
+Moderator-only dispute action. Cancels an active assignment and writes `matching.admin_events` in the same matching transaction.
+
+Request:
+
+```json
+{
+  "reason": "Moderator dispute resolution",
+  "cancel_reason": "Worker is unavailable",
+  "comment": "Evidence checked"
+}
+```
+
+`reason` is required. `cancel_reason` is stored on the assignment.
+
+### `POST /v1/moderation/matching/assignments/{id}/complete`
+
+Moderator-only dispute action. Completes an active assignment and writes `matching.admin_events` in the same matching transaction.
+
+Request:
+
+```json
+{
+  "reason": "Moderator dispute resolution",
+  "comment": "Shift completion confirmed"
+}
+```
+
+`reason` is required.
+
+Moderator matching routes are exposed under `/v1/moderation/matching/...` for future extraction. MVP execution remains in `matching-service`, and gateway applies a moderator-only gate before calling gRPC.
+
+## Placeholder Endpoints
+
+These routes are registered in the gateway but currently return `not_implemented` until `communication-service` is implemented.
 
 Communication:
 

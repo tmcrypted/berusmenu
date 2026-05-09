@@ -106,6 +106,17 @@ func (s *Server) GetUser(ctx context.Context, req *authv1.GetUserRequest) (*auth
 	return &authv1.GetUserResponse{User: toProtoUser(user)}, nil
 }
 
+func (s *Server) GetUserByID(ctx context.Context, req *authv1.GetUserByIDRequest) (*authv1.GetUserByIDResponse, error) {
+	if _, err := userIDFromMetadata(ctx); err != nil {
+		return nil, err
+	}
+	user, err := s.auth.GetUserByID(ctx, req.GetUserId())
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &authv1.GetUserByIDResponse{User: toProtoUser(user)}, nil
+}
+
 func (s *Server) BlockUser(ctx context.Context, req *authv1.BlockUserRequest) (*authv1.BlockUserResponse, error) {
 	actorUserID, actorRole, err := actorFromMetadata(ctx)
 	if err != nil {

@@ -92,6 +92,8 @@ services:
         condition: service_started
       inventory-service:
         condition: service_started
+      matching-service:
+        condition: service_started
     ports:
       - "${API_GATEWAY_PORT:-8080}:8080"
     networks:
@@ -167,12 +169,35 @@ services:
       - berusmenu
 
   matching-service:
-    profiles: ["future"]
     build:
-      context: ../matching-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: matching-service/Dockerfile
     container_name: berusmenu-matching-service
     restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      GRPC_ADDR: :50053
+      POSTGRES_DSN: postgres://${POSTGRES_USER:-berusmenu}:${POSTGRES_PASSWORD:-berusmenu}@postgres:5432/${POSTGRES_DB:-berusmenu}?sslmode=disable
+      INVENTORY_GRPC_ADDR: inventory-service:50052
+      AUTH_GRPC_ADDR: auth-service:50051
+      KAFKA_BROKERS: kafka:9092
+      MATCHING_RESPONSE_CREATED_TOPIC: matching.response_created
+      OUTBOX_POLL_INTERVAL: ${OUTBOX_POLL_INTERVAL:-1s}
+      OUTBOX_BATCH_SIZE: ${OUTBOX_BATCH_SIZE:-50}
+      OUTBOX_RETRY_BACKOFF: ${OUTBOX_RETRY_BACKOFF:-1s}
+      OUTBOX_CLAIM_TIMEOUT: ${OUTBOX_CLAIM_TIMEOUT:-5m}
+      MIGRATIONS_DIR: internal/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      inventory-service:
+        condition: service_started
+      auth-service:
+        condition: service_started
+    ports:
+      - "${MATCHING_GRPC_PORT:-50053}:50053"
     networks:
       - berusmenu
 

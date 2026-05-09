@@ -11,6 +11,7 @@ import (
 	matchinghandler "github.com/tmcrypted/berusmenu/api-gateway/internal/http/handlers/matching"
 	"github.com/tmcrypted/berusmenu/api-gateway/internal/http/middleware"
 	authv1 "github.com/tmcrypted/berusmenu/proto/gen/go/auth/v1"
+	commonv1 "github.com/tmcrypted/berusmenu/proto/gen/go/common/v1"
 	communicationv1 "github.com/tmcrypted/berusmenu/proto/gen/go/communication/v1"
 	inventoryv1 "github.com/tmcrypted/berusmenu/proto/gen/go/inventory/v1"
 	matchingv1 "github.com/tmcrypted/berusmenu/proto/gen/go/matching/v1"
@@ -47,11 +48,12 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	authMiddleware := middleware.Auth(deps.Auth, deps.Config)
 	csrfMiddleware := middleware.CSRF(deps.Config)
 	verifiedMiddleware := middleware.RequireVerified()
+	moderatorMiddleware := middleware.RequireRole(commonv1.UserRole_USER_ROLE_MODERATOR)
 
 	api := router.Group("/v1")
 	authhandler.RegisterRoutes(api, deps.Config, deps.Auth, authMiddleware, csrfMiddleware, verifiedMiddleware)
 	inventoryhandler.RegisterRoutes(api, deps.Inventory, deps.Auth, authMiddleware, csrfMiddleware, verifiedMiddleware)
-	matchinghandler.RegisterRoutes(api, deps.Matching, authMiddleware, csrfMiddleware, verifiedMiddleware)
+	matchinghandler.RegisterRoutes(api, deps.Matching, authMiddleware, csrfMiddleware, verifiedMiddleware, moderatorMiddleware)
 	communicationhandler.RegisterRoutes(router, api, deps.Communication, authMiddleware, csrfMiddleware, verifiedMiddleware)
 
 	return router

@@ -57,11 +57,14 @@ Can:
 - inspect moderation queue
 - temporarily block spam users
 - delete a spam owner's pending PVZ requests and move their remaining PVZ to blocked
+- inspect all matching vacancies, responses, assignments, reviews and replies
+- perform business-valid matching dispute actions through moderation routes
 
 Cannot:
 
 - create assignments
 - write reviews as part of marketplace business flow
+- hard-delete matching business history
 
 ## Unverified user
 

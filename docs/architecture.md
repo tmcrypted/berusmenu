@@ -31,7 +31,7 @@ flowchart LR
     NOTIF --> MAIL["Email sender"]
 ```
 
-`matching-service` and `communication-service` are planned services. Their contracts exist, but runtime implementation is future work.
+`matching-service` is implemented as the owner of vacancy, response, assignment, review and rating state. `communication-service` is still planned.
 
 ## Decisions
 
@@ -86,6 +86,8 @@ flowchart LR
 - assignment lifecycle;
 - active vacancy truth;
 - reviews and review replies.
+- user rating aggregates derived from reviews;
+- matching-specific moderator audit events.
 
 ### Communication
 

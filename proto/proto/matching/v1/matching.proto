@@ -14,13 +14,14 @@ message Vacancy {
   berusmenu.common.v1.VacancyStatus status = 4;
   optional string title = 5;
   optional string description = 6;
-  string shift_date = 7;
-  optional string shift_start_at = 8;
-  optional string shift_end_at = 9;
+  google.protobuf.Timestamp shift_start_at = 7;
+  google.protobuf.Timestamp shift_end_at = 8;
+  string pvz_name_snapshot = 9;
   int64 pay_amount = 10;
   int32 slots_total = 11;
   google.protobuf.Timestamp created_at = 12;
   google.protobuf.Timestamp updated_at = 13;
+  string pvz_address_snapshot = 14;
 }
 
 message Response {
@@ -43,10 +44,9 @@ message Assignment {
   google.protobuf.Timestamp accepted_at = 7;
   string pvz_name_snapshot = 8;
   string pvz_address_snapshot = 9;
-  string shift_date_snapshot = 10;
+  google.protobuf.Timestamp shift_start_at_snapshot = 10;
   int64 pay_amount_snapshot = 11;
-  optional string shift_start_at_snapshot = 12;
-  optional string shift_end_at_snapshot = 13;
+  google.protobuf.Timestamp shift_end_at_snapshot = 12;
   string owner_name_snapshot = 14;
   string worker_name_snapshot = 15;
   optional google.protobuf.Timestamp completed_at = 16;
@@ -66,6 +66,7 @@ message Review {
   int32 rating = 6;
   optional string body = 7;
   google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
 }
 
 message ReviewReply {
@@ -75,15 +76,22 @@ message ReviewReply {
   int64 target_user_id = 4;
   string body = 5;
   google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message UserRating {
+  int64 user_id = 1;
+  double avg_rating = 2;
+  int64 reviews_count = 3;
+  google.protobuf.Timestamp updated_at = 4;
 }
 
 message CreateVacancyRequest {
   int64 pvz_id = 1;
   optional string title = 2;
   optional string description = 3;
-  string shift_date = 4;
-  optional string shift_start_at = 5;
-  optional string shift_end_at = 6;
+  google.protobuf.Timestamp shift_start_at = 4;
+  google.protobuf.Timestamp shift_end_at = 5;
   int64 pay_amount = 7;
   int32 slots_total = 8;
 }
@@ -102,8 +110,8 @@ message GetVacancyResponse {
 
 message ListVacanciesRequest {
   optional int64 pvz_id = 1;
-  optional string shift_date_from = 2;
-  optional string shift_date_to = 3;
+  optional google.protobuf.Timestamp shift_start_from = 2;
+  optional google.protobuf.Timestamp shift_start_to = 3;
   optional berusmenu.common.v1.VacancyStatus status = 4;
   int32 page_size = 5;
   optional string page_token = 6;
@@ -155,6 +163,7 @@ message ListResponsesForVacancyResponse {
 
 message AcceptResponseRequest {
   int64 response_id = 1;
+  optional string admin_reason = 2;
 }
 
 message AcceptResponseResponse {
@@ -164,6 +173,7 @@ message AcceptResponseResponse {
 message CancelAssignmentRequest {
   int64 assignment_id = 1;
   optional string cancel_reason = 2;
+  optional string admin_reason = 3;
 }
 
 message CancelAssignmentResponse {
@@ -172,6 +182,7 @@ message CancelAssignmentResponse {
 
 message CompleteAssignmentRequest {
   int64 assignment_id = 1;
+  optional string admin_reason = 2;
 }
 
 message CompleteAssignmentResponse {
@@ -188,6 +199,16 @@ message CreateReviewResponse {
   Review review = 1;
 }
 
+message UpdateReviewRequest {
+  int64 review_id = 1;
+  optional int32 rating = 2;
+  optional string body = 3;
+}
+
+message UpdateReviewResponse {
+  Review review = 1;
+}
+
 message CreateReviewReplyRequest {
   int64 review_id = 1;
   int64 target_user_id = 2;
@@ -195,6 +216,15 @@ message CreateReviewReplyRequest {
 }
 
 message CreateReviewReplyResponse {
+  ReviewReply reply = 1;
+}
+
+message UpdateReviewReplyRequest {
+  int64 reply_id = 1;
+  string body = 2;
+}
+
+message UpdateReviewReplyResponse {
   ReviewReply reply = 1;
 }
 
@@ -207,6 +237,25 @@ message ListReviewsRequest {
 message ListReviewsResponse {
   repeated Review items = 1;
   optional string next_page_token = 2;
+}
+
+message ListReviewRepliesRequest {
+  int64 review_id = 1;
+  int32 page_size = 2;
+  optional string page_token = 3;
+}
+
+message ListReviewRepliesResponse {
+  repeated ReviewReply items = 1;
+  optional string next_page_token = 2;
+}
+
+message GetUserRatingRequest {
+  int64 user_id = 1;
+}
+
+message GetUserRatingResponse {
+  UserRating rating = 1;
 }
 
 message HasActiveVacancyForPvzRequest {
@@ -239,8 +288,12 @@ service MatchingService {
   rpc CancelAssignment(CancelAssignmentRequest) returns (CancelAssignmentResponse);
   rpc CompleteAssignment(CompleteAssignmentRequest) returns (CompleteAssignmentResponse);
   rpc CreateReview(CreateReviewRequest) returns (CreateReviewResponse);
+  rpc UpdateReview(UpdateReviewRequest) returns (UpdateReviewResponse);
   rpc CreateReviewReply(CreateReviewReplyRequest) returns (CreateReviewReplyResponse);
+  rpc UpdateReviewReply(UpdateReviewReplyRequest) returns (UpdateReviewReplyResponse);
+  rpc ListReviewReplies(ListReviewRepliesRequest) returns (ListReviewRepliesResponse);
   rpc ListReviews(ListReviewsRequest) returns (ListReviewsResponse);
+  rpc GetUserRating(GetUserRatingRequest) returns (GetUserRatingResponse);
   rpc HasActiveVacancyForPvz(HasActiveVacancyForPvzRequest) returns (HasActiveVacancyForPvzResponse);
   rpc CheckResponseChatWritable(CheckResponseChatWritableRequest) returns (CheckResponseChatWritableResponse);
 }
