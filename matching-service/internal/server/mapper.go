@@ -83,6 +83,14 @@ func toProtoAssignment(item store.Assignment) *matchingv1.Assignment {
 	return out
 }
 
+func toProtoAssignments(items []store.Assignment) []*matchingv1.Assignment {
+	out := make([]*matchingv1.Assignment, 0, len(items))
+	for _, item := range items {
+		out = append(out, toProtoAssignment(item))
+	}
+	return out
+}
+
 func toProtoReview(item store.Review) *matchingv1.Review {
 	return &matchingv1.Review{
 		Id:           item.ID,

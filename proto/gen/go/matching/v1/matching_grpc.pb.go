@@ -26,7 +26,11 @@ const (
 	MatchingService_CreateResponse_FullMethodName            = "/berusmenu.matching.v1.MatchingService/CreateResponse"
 	MatchingService_WithdrawResponse_FullMethodName          = "/berusmenu.matching.v1.MatchingService/WithdrawResponse"
 	MatchingService_ListResponsesForVacancy_FullMethodName   = "/berusmenu.matching.v1.MatchingService/ListResponsesForVacancy"
+	MatchingService_ListMyResponses_FullMethodName           = "/berusmenu.matching.v1.MatchingService/ListMyResponses"
 	MatchingService_AcceptResponse_FullMethodName            = "/berusmenu.matching.v1.MatchingService/AcceptResponse"
+	MatchingService_GetAssignment_FullMethodName             = "/berusmenu.matching.v1.MatchingService/GetAssignment"
+	MatchingService_ListMyAssignments_FullMethodName         = "/berusmenu.matching.v1.MatchingService/ListMyAssignments"
+	MatchingService_GetAssignmentForVacancy_FullMethodName   = "/berusmenu.matching.v1.MatchingService/GetAssignmentForVacancy"
 	MatchingService_CancelAssignment_FullMethodName          = "/berusmenu.matching.v1.MatchingService/CancelAssignment"
 	MatchingService_CompleteAssignment_FullMethodName        = "/berusmenu.matching.v1.MatchingService/CompleteAssignment"
 	MatchingService_CreateReview_FullMethodName              = "/berusmenu.matching.v1.MatchingService/CreateReview"
@@ -51,7 +55,11 @@ type MatchingServiceClient interface {
 	CreateResponse(ctx context.Context, in *CreateResponseRequest, opts ...grpc.CallOption) (*CreateResponseResponse, error)
 	WithdrawResponse(ctx context.Context, in *WithdrawResponseRequest, opts ...grpc.CallOption) (*WithdrawResponseResponse, error)
 	ListResponsesForVacancy(ctx context.Context, in *ListResponsesForVacancyRequest, opts ...grpc.CallOption) (*ListResponsesForVacancyResponse, error)
+	ListMyResponses(ctx context.Context, in *ListMyResponsesRequest, opts ...grpc.CallOption) (*ListMyResponsesResponse, error)
 	AcceptResponse(ctx context.Context, in *AcceptResponseRequest, opts ...grpc.CallOption) (*AcceptResponseResponse, error)
+	GetAssignment(ctx context.Context, in *GetAssignmentRequest, opts ...grpc.CallOption) (*GetAssignmentResponse, error)
+	ListMyAssignments(ctx context.Context, in *ListMyAssignmentsRequest, opts ...grpc.CallOption) (*ListMyAssignmentsResponse, error)
+	GetAssignmentForVacancy(ctx context.Context, in *GetAssignmentForVacancyRequest, opts ...grpc.CallOption) (*GetAssignmentForVacancyResponse, error)
 	CancelAssignment(ctx context.Context, in *CancelAssignmentRequest, opts ...grpc.CallOption) (*CancelAssignmentResponse, error)
 	CompleteAssignment(ctx context.Context, in *CompleteAssignmentRequest, opts ...grpc.CallOption) (*CompleteAssignmentResponse, error)
 	CreateReview(ctx context.Context, in *CreateReviewRequest, opts ...grpc.CallOption) (*CreateReviewResponse, error)
@@ -143,10 +151,50 @@ func (c *matchingServiceClient) ListResponsesForVacancy(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *matchingServiceClient) ListMyResponses(ctx context.Context, in *ListMyResponsesRequest, opts ...grpc.CallOption) (*ListMyResponsesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMyResponsesResponse)
+	err := c.cc.Invoke(ctx, MatchingService_ListMyResponses_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *matchingServiceClient) AcceptResponse(ctx context.Context, in *AcceptResponseRequest, opts ...grpc.CallOption) (*AcceptResponseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AcceptResponseResponse)
 	err := c.cc.Invoke(ctx, MatchingService_AcceptResponse_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *matchingServiceClient) GetAssignment(ctx context.Context, in *GetAssignmentRequest, opts ...grpc.CallOption) (*GetAssignmentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAssignmentResponse)
+	err := c.cc.Invoke(ctx, MatchingService_GetAssignment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *matchingServiceClient) ListMyAssignments(ctx context.Context, in *ListMyAssignmentsRequest, opts ...grpc.CallOption) (*ListMyAssignmentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMyAssignmentsResponse)
+	err := c.cc.Invoke(ctx, MatchingService_ListMyAssignments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *matchingServiceClient) GetAssignmentForVacancy(ctx context.Context, in *GetAssignmentForVacancyRequest, opts ...grpc.CallOption) (*GetAssignmentForVacancyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAssignmentForVacancyResponse)
+	err := c.cc.Invoke(ctx, MatchingService_GetAssignmentForVacancy_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +322,11 @@ type MatchingServiceServer interface {
 	CreateResponse(context.Context, *CreateResponseRequest) (*CreateResponseResponse, error)
 	WithdrawResponse(context.Context, *WithdrawResponseRequest) (*WithdrawResponseResponse, error)
 	ListResponsesForVacancy(context.Context, *ListResponsesForVacancyRequest) (*ListResponsesForVacancyResponse, error)
+	ListMyResponses(context.Context, *ListMyResponsesRequest) (*ListMyResponsesResponse, error)
 	AcceptResponse(context.Context, *AcceptResponseRequest) (*AcceptResponseResponse, error)
+	GetAssignment(context.Context, *GetAssignmentRequest) (*GetAssignmentResponse, error)
+	ListMyAssignments(context.Context, *ListMyAssignmentsRequest) (*ListMyAssignmentsResponse, error)
+	GetAssignmentForVacancy(context.Context, *GetAssignmentForVacancyRequest) (*GetAssignmentForVacancyResponse, error)
 	CancelAssignment(context.Context, *CancelAssignmentRequest) (*CancelAssignmentResponse, error)
 	CompleteAssignment(context.Context, *CompleteAssignmentRequest) (*CompleteAssignmentResponse, error)
 	CreateReview(context.Context, *CreateReviewRequest) (*CreateReviewResponse, error)
@@ -314,8 +366,20 @@ func (UnimplementedMatchingServiceServer) WithdrawResponse(context.Context, *Wit
 func (UnimplementedMatchingServiceServer) ListResponsesForVacancy(context.Context, *ListResponsesForVacancyRequest) (*ListResponsesForVacancyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListResponsesForVacancy not implemented")
 }
+func (UnimplementedMatchingServiceServer) ListMyResponses(context.Context, *ListMyResponsesRequest) (*ListMyResponsesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListMyResponses not implemented")
+}
 func (UnimplementedMatchingServiceServer) AcceptResponse(context.Context, *AcceptResponseRequest) (*AcceptResponseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AcceptResponse not implemented")
+}
+func (UnimplementedMatchingServiceServer) GetAssignment(context.Context, *GetAssignmentRequest) (*GetAssignmentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAssignment not implemented")
+}
+func (UnimplementedMatchingServiceServer) ListMyAssignments(context.Context, *ListMyAssignmentsRequest) (*ListMyAssignmentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListMyAssignments not implemented")
+}
+func (UnimplementedMatchingServiceServer) GetAssignmentForVacancy(context.Context, *GetAssignmentForVacancyRequest) (*GetAssignmentForVacancyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAssignmentForVacancy not implemented")
 }
 func (UnimplementedMatchingServiceServer) CancelAssignment(context.Context, *CancelAssignmentRequest) (*CancelAssignmentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelAssignment not implemented")
@@ -489,6 +553,24 @@ func _MatchingService_ListResponsesForVacancy_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MatchingService_ListMyResponses_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMyResponsesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchingServiceServer).ListMyResponses(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchingService_ListMyResponses_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchingServiceServer).ListMyResponses(ctx, req.(*ListMyResponsesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _MatchingService_AcceptResponse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AcceptResponseRequest)
 	if err := dec(in); err != nil {
@@ -503,6 +585,60 @@ func _MatchingService_AcceptResponse_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MatchingServiceServer).AcceptResponse(ctx, req.(*AcceptResponseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MatchingService_GetAssignment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAssignmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchingServiceServer).GetAssignment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchingService_GetAssignment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchingServiceServer).GetAssignment(ctx, req.(*GetAssignmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MatchingService_ListMyAssignments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMyAssignmentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchingServiceServer).ListMyAssignments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchingService_ListMyAssignments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchingServiceServer).ListMyAssignments(ctx, req.(*ListMyAssignmentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MatchingService_GetAssignmentForVacancy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAssignmentForVacancyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchingServiceServer).GetAssignmentForVacancy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchingService_GetAssignmentForVacancy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchingServiceServer).GetAssignmentForVacancy(ctx, req.(*GetAssignmentForVacancyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -741,8 +877,24 @@ var MatchingService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _MatchingService_ListResponsesForVacancy_Handler,
 		},
 		{
+			MethodName: "ListMyResponses",
+			Handler:    _MatchingService_ListMyResponses_Handler,
+		},
+		{
 			MethodName: "AcceptResponse",
 			Handler:    _MatchingService_AcceptResponse_Handler,
+		},
+		{
+			MethodName: "GetAssignment",
+			Handler:    _MatchingService_GetAssignment_Handler,
+		},
+		{
+			MethodName: "ListMyAssignments",
+			Handler:    _MatchingService_ListMyAssignments_Handler,
+		},
+		{
+			MethodName: "GetAssignmentForVacancy",
+			Handler:    _MatchingService_GetAssignmentForVacancy_Handler,
 		},
 		{
 			MethodName: "CancelAssignment",

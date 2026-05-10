@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 
 FROM golang:1.25-alpine AS builder
+ARG GOPROXY="https://proxy.golang.org|https://goproxy.io|https://goproxy.cn|direct"
+ENV GOPROXY=${GOPROXY}
 WORKDIR /src
 
 COPY api-gateway/go.mod api-gateway/go.sum ./api-gateway/

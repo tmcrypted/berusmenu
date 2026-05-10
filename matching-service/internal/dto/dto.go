@@ -75,10 +75,27 @@ type ListResponsesInput struct {
 	PageToken *string
 }
 
+type ListMyResponsesInput struct {
+	Actor     Actor
+	PageSize  int32
+	PageToken *string
+}
+
 type AcceptResponseInput struct {
 	Actor       Actor
 	ResponseID  int64
 	AdminReason *string
+}
+
+type ListMyAssignmentsInput struct {
+	Actor     Actor
+	PageSize  int32
+	PageToken *string
+}
+
+type GetAssignmentForVacancyInput struct {
+	Actor     Actor
+	VacancyID int64
 }
 
 type CancelAssignmentInput struct {

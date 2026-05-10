@@ -161,6 +161,16 @@ message ListResponsesForVacancyResponse {
   optional string next_page_token = 2;
 }
 
+message ListMyResponsesRequest {
+  int32 page_size = 1;
+  optional string page_token = 2;
+}
+
+message ListMyResponsesResponse {
+  repeated Response items = 1;
+  optional string next_page_token = 2;
+}
+
 message AcceptResponseRequest {
   int64 response_id = 1;
   optional string admin_reason = 2;
@@ -186,6 +196,32 @@ message CompleteAssignmentRequest {
 }
 
 message CompleteAssignmentResponse {
+  Assignment assignment = 1;
+}
+
+message GetAssignmentRequest {
+  int64 id = 1;
+}
+
+message GetAssignmentResponse {
+  Assignment assignment = 1;
+}
+
+message ListMyAssignmentsRequest {
+  int32 page_size = 1;
+  optional string page_token = 2;
+}
+
+message ListMyAssignmentsResponse {
+  repeated Assignment items = 1;
+  optional string next_page_token = 2;
+}
+
+message GetAssignmentForVacancyRequest {
+  int64 vacancy_id = 1;
+}
+
+message GetAssignmentForVacancyResponse {
   Assignment assignment = 1;
 }
 
@@ -284,7 +320,11 @@ service MatchingService {
   rpc CreateResponse(CreateResponseRequest) returns (CreateResponseResponse);
   rpc WithdrawResponse(WithdrawResponseRequest) returns (WithdrawResponseResponse);
   rpc ListResponsesForVacancy(ListResponsesForVacancyRequest) returns (ListResponsesForVacancyResponse);
+  rpc ListMyResponses(ListMyResponsesRequest) returns (ListMyResponsesResponse);
   rpc AcceptResponse(AcceptResponseRequest) returns (AcceptResponseResponse);
+  rpc GetAssignment(GetAssignmentRequest) returns (GetAssignmentResponse);
+  rpc ListMyAssignments(ListMyAssignmentsRequest) returns (ListMyAssignmentsResponse);
+  rpc GetAssignmentForVacancy(GetAssignmentForVacancyRequest) returns (GetAssignmentForVacancyResponse);
   rpc CancelAssignment(CancelAssignmentRequest) returns (CancelAssignmentResponse);
   rpc CompleteAssignment(CompleteAssignmentRequest) returns (CompleteAssignmentResponse);
   rpc CreateReview(CreateReviewRequest) returns (CreateReviewResponse);

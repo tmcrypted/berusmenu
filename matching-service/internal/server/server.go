@@ -140,6 +140,18 @@ func (s *Server) ListResponsesForVacancy(ctx context.Context, req *matchingv1.Li
 	return &matchingv1.ListResponsesForVacancyResponse{Items: toProtoResponses(items), NextPageToken: next}, nil
 }
 
+func (s *Server) ListMyResponses(ctx context.Context, req *matchingv1.ListMyResponsesRequest) (*matchingv1.ListMyResponsesResponse, error) {
+	actor, err := actorFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	items, next, err := s.matching.ListMyResponses(ctx, dto.ListMyResponsesInput{Actor: actor, PageSize: req.GetPageSize(), PageToken: req.PageToken})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &matchingv1.ListMyResponsesResponse{Items: toProtoResponses(items), NextPageToken: next}, nil
+}
+
 func (s *Server) AcceptResponse(ctx context.Context, req *matchingv1.AcceptResponseRequest) (*matchingv1.AcceptResponseResponse, error) {
 	actor, err := actorFromMetadata(ctx)
 	if err != nil {
@@ -154,6 +166,42 @@ func (s *Server) AcceptResponse(ctx context.Context, req *matchingv1.AcceptRespo
 		return nil, toGRPCError(err)
 	}
 	return &matchingv1.AcceptResponseResponse{Assignment: toProtoAssignment(assignment)}, nil
+}
+
+func (s *Server) GetAssignment(ctx context.Context, req *matchingv1.GetAssignmentRequest) (*matchingv1.GetAssignmentResponse, error) {
+	actor, err := actorFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	assignment, err := s.matching.GetAssignment(ctx, dto.IDInput{Actor: actor, ID: req.GetId()})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &matchingv1.GetAssignmentResponse{Assignment: toProtoAssignment(assignment)}, nil
+}
+
+func (s *Server) ListMyAssignments(ctx context.Context, req *matchingv1.ListMyAssignmentsRequest) (*matchingv1.ListMyAssignmentsResponse, error) {
+	actor, err := actorFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	items, next, err := s.matching.ListMyAssignments(ctx, dto.ListMyAssignmentsInput{Actor: actor, PageSize: req.GetPageSize(), PageToken: req.PageToken})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &matchingv1.ListMyAssignmentsResponse{Items: toProtoAssignments(items), NextPageToken: next}, nil
+}
+
+func (s *Server) GetAssignmentForVacancy(ctx context.Context, req *matchingv1.GetAssignmentForVacancyRequest) (*matchingv1.GetAssignmentForVacancyResponse, error) {
+	actor, err := actorFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	assignment, err := s.matching.GetAssignmentForVacancy(ctx, dto.GetAssignmentForVacancyInput{Actor: actor, VacancyID: req.GetVacancyId()})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &matchingv1.GetAssignmentForVacancyResponse{Assignment: toProtoAssignment(assignment)}, nil
 }
 
 func (s *Server) CancelAssignment(ctx context.Context, req *matchingv1.CancelAssignmentRequest) (*matchingv1.CancelAssignmentResponse, error) {

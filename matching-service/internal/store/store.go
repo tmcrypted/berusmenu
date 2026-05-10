@@ -146,6 +146,15 @@ func (s *Store) ListResponsesForVacancy(ctx context.Context, vacancyID int64, li
 	return list(ctx, s.pool, sql, scanResponse, args...)
 }
 
+func (s *Store) ListResponsesByWorker(ctx context.Context, workerID int64, limit uint64, offset uint64) ([]Response, error) {
+	sql, args, err := psql.Select(responseColumns()).From("matching.responses").
+		Where(sq.Eq{"worker_id": workerID}).OrderBy("created_at DESC", "id DESC").Limit(limit).Offset(offset).ToSql()
+	if err != nil {
+		return nil, err
+	}
+	return list(ctx, s.pool, sql, scanResponse, args...)
+}
+
 func (s *Store) WithdrawResponse(ctx context.Context, responseID int64) (Response, error) {
 	sql, args, err := psql.Update("matching.responses").
 		Set("status", responseStatusToDB(commonv1.ResponseStatus_RESPONSE_STATUS_WITHDRAWN)).
@@ -240,6 +249,27 @@ func (s *Store) AcceptResponse(ctx context.Context, input AssignmentSnapshotInpu
 
 func (s *Store) GetAssignment(ctx context.Context, id int64) (Assignment, error) {
 	sql, args, err := psql.Select(assignmentColumns()).From("matching.assignments").Where(sq.Eq{"id": id}).ToSql()
+	if err != nil {
+		return Assignment{}, err
+	}
+	return scanAssignment(s.pool.QueryRow(ctx, sql, args...))
+}
+
+func (s *Store) ListAssignmentsForUser(ctx context.Context, userID int64, limit uint64, offset uint64) ([]Assignment, error) {
+	sql, args, err := psql.Select(assignmentColumns()).From("matching.assignments").
+		Where(sq.Or{sq.Eq{"owner_id": userID}, sq.Eq{"worker_id": userID}}).
+		OrderBy("created_at DESC", "id DESC").
+		Limit(limit).
+		Offset(offset).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+	return list(ctx, s.pool, sql, scanAssignment, args...)
+}
+
+func (s *Store) AssignmentForVacancy(ctx context.Context, vacancyID int64) (Assignment, error) {
+	sql, args, err := psql.Select(assignmentColumns()).From("matching.assignments").Where(sq.Eq{"vacancy_id": vacancyID}).ToSql()
 	if err != nil {
 		return Assignment{}, err
 	}

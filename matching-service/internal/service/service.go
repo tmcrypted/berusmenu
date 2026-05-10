@@ -25,10 +25,13 @@ type Repository interface {
 	CreateResponseWithOutbox(ctx context.Context, response store.Response, buildOutbox func(store.Response) (store.OutboxEventInput, error)) (store.Response, error)
 	GetResponse(ctx context.Context, id int64) (store.Response, error)
 	ListResponsesForVacancy(ctx context.Context, vacancyID int64, limit uint64, offset uint64) ([]store.Response, error)
+	ListResponsesByWorker(ctx context.Context, workerID int64, limit uint64, offset uint64) ([]store.Response, error)
 	WithdrawResponse(ctx context.Context, responseID int64) (store.Response, error)
 	AssignmentForResponse(ctx context.Context, responseID int64) (store.Assignment, error)
 	AcceptResponse(ctx context.Context, input store.AssignmentSnapshotInput, admin *store.AdminEventInput) (store.Assignment, error)
 	GetAssignment(ctx context.Context, id int64) (store.Assignment, error)
+	ListAssignmentsForUser(ctx context.Context, userID int64, limit uint64, offset uint64) ([]store.Assignment, error)
+	AssignmentForVacancy(ctx context.Context, vacancyID int64) (store.Assignment, error)
 	FinalizeAssignment(ctx context.Context, id int64, status commonv1.AssignmentStatus, cancelledBy *int64, reason *string, admin *store.AdminEventInput) (store.Assignment, error)
 	CreateReviewAndRecalculateRating(ctx context.Context, review store.Review) (store.Review, error)
 	UpdateReviewAndRecalculateRating(ctx context.Context, id int64, rating *int32, body *string) (store.Review, error)
@@ -222,6 +225,21 @@ func (s *Service) ListResponsesForVacancy(ctx context.Context, input dto.ListRes
 	return trimPage(items, page)
 }
 
+func (s *Service) ListMyResponses(ctx context.Context, input dto.ListMyResponsesInput) ([]store.Response, *string, error) {
+	if err := requireRole(input.Actor, commonv1.UserRole_USER_ROLE_WORKER); err != nil {
+		return nil, nil, err
+	}
+	page, err := pageFrom(input.PageSize, input.PageToken)
+	if err != nil {
+		return nil, nil, err
+	}
+	items, err := s.repo.ListResponsesByWorker(ctx, input.Actor.UserID, page.Limit+1, page.Offset)
+	if err != nil {
+		return nil, nil, serviceError(ErrInternal, "failed to list responses")
+	}
+	return trimPage(items, page)
+}
+
 func (s *Service) AcceptResponse(ctx context.Context, input dto.AcceptResponseInput) (store.Assignment, error) {
 	response, err := s.repo.GetResponse(ctx, input.ResponseID)
 	if err != nil {
@@ -274,6 +292,50 @@ func (s *Service) AcceptResponse(ctx context.Context, input dto.AcceptResponseIn
 	}, admin)
 	if err != nil {
 		return store.Assignment{}, notFoundOrInternal(err, "response cannot be accepted", "failed to accept response")
+	}
+	return assignment, nil
+}
+
+func (s *Service) GetAssignment(ctx context.Context, input dto.IDInput) (store.Assignment, error) {
+	assignment, err := s.repo.GetAssignment(ctx, input.ID)
+	if err != nil {
+		return store.Assignment{}, notFoundOrInternal(err, "assignment not found", "failed to get assignment")
+	}
+	if err := canReadAssignment(input.Actor, assignment); err != nil {
+		return store.Assignment{}, err
+	}
+	return assignment, nil
+}
+
+func (s *Service) ListMyAssignments(ctx context.Context, input dto.ListMyAssignmentsInput) ([]store.Assignment, *string, error) {
+	if input.Actor.UserID <= 0 {
+		return nil, nil, serviceError(ErrUnauthenticated, "missing authenticated user")
+	}
+	if input.Actor.Role == commonv1.UserRole_USER_ROLE_MODERATOR {
+		return nil, nil, serviceError(ErrPermissionDenied, "moderator does not have personal assignments")
+	}
+	page, err := pageFrom(input.PageSize, input.PageToken)
+	if err != nil {
+		return nil, nil, err
+	}
+	items, err := s.repo.ListAssignmentsForUser(ctx, input.Actor.UserID, page.Limit+1, page.Offset)
+	if err != nil {
+		return nil, nil, serviceError(ErrInternal, "failed to list assignments")
+	}
+	return trimPage(items, page)
+}
+
+func (s *Service) GetAssignmentForVacancy(ctx context.Context, input dto.GetAssignmentForVacancyInput) (store.Assignment, error) {
+	vacancy, err := s.repo.GetVacancy(ctx, input.VacancyID)
+	if err != nil {
+		return store.Assignment{}, notFoundOrInternal(err, "vacancy not found", "failed to get vacancy")
+	}
+	if input.Actor.Role != commonv1.UserRole_USER_ROLE_MODERATOR && vacancy.OwnerID != input.Actor.UserID {
+		return store.Assignment{}, serviceError(ErrPermissionDenied, "cannot access assignment for vacancy")
+	}
+	assignment, err := s.repo.AssignmentForVacancy(ctx, vacancy.ID)
+	if err != nil {
+		return store.Assignment{}, notFoundOrInternal(err, "assignment not found", "failed to get assignment")
 	}
 	return assignment, nil
 }
@@ -523,6 +585,16 @@ func canReadVacancy(actor dto.Actor, vacancy store.Vacancy) error {
 		return nil
 	}
 	return serviceError(ErrPermissionDenied, "cannot access vacancy")
+}
+
+func canReadAssignment(actor dto.Actor, assignment store.Assignment) error {
+	if actor.Role == commonv1.UserRole_USER_ROLE_MODERATOR {
+		return nil
+	}
+	if actor.UserID == assignment.OwnerID || actor.UserID == assignment.WorkerID {
+		return nil
+	}
+	return serviceError(ErrPermissionDenied, "cannot access assignment")
 }
 
 func reviewTarget(actor dto.Actor, assignment store.Assignment) (int64, commonv1.ReviewTargetRole, error) {

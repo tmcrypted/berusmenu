@@ -44,6 +44,13 @@ export function PvzCard({ pvz }: Props) {
       ) : null}
 
       <div className="mt-5 flex flex-wrap gap-3">
+        {pvz.status === "approved" ? (
+          <Link href={`/owner/vacancies/new?pvz_id=${pvz.id}`}>
+            <Button type="button" className="rounded-xl">
+              Создать вакансию
+            </Button>
+          </Link>
+        ) : null}
         {canEdit ? (
           <Link href={`/owner/pvz/${pvz.id}/edit`}>
             <Button type="button" variant="secondary" className="rounded-xl">

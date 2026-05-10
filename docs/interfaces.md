@@ -53,11 +53,15 @@ Responses:
 
 - `POST /v1/vacancies/{id}/responses`
 - `GET /v1/vacancies/{id}/responses`
+- `GET /v1/vacancies/{id}/assignment`
+- `GET /v1/responses/me`
 - `POST /v1/responses/{id}/withdraw`
 - `POST /v1/responses/{id}/accept`
 
 Assignments:
 
+- `GET /v1/assignments/me`
+- `GET /v1/assignments/{id}`
 - `POST /v1/assignments/{id}/cancel`
 - `POST /v1/assignments/{id}/complete`
 
@@ -134,7 +138,11 @@ Implemented:
 - `CreateResponse`
 - `WithdrawResponse`
 - `ListResponsesForVacancy`
+- `ListMyResponses`
 - `AcceptResponse`
+- `GetAssignment`
+- `ListMyAssignments`
+- `GetAssignmentForVacancy`
 - `CancelAssignment`
 - `CompleteAssignment`
 - `CreateReview`

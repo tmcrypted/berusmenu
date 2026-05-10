@@ -126,6 +126,35 @@ export function AccountMenu({ user, status }: Props) {
             </div>
           ) : null}
 
+          <div className="border-b border-[var(--border)] py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+              Matching
+            </p>
+            <Link
+              href={isOwner ? "/owner/vacancies" : isModerator ? "/moderation/matching" : "/vacancies"}
+              onClick={() => setOpen(false)}
+              className="mt-3 block"
+            >
+              <Button type="button" variant="secondary" fullWidth className="rounded-xl text-sm">
+                {isOwner ? "Мои вакансии" : isModerator ? "Модерация matching" : "Лента смен"}
+              </Button>
+            </Link>
+            {!isOwner && !isModerator ? (
+              <>
+                <Link href="/responses" onClick={() => setOpen(false)} className="mt-3 block">
+                  <Button type="button" variant="secondary" fullWidth className="rounded-xl text-sm">
+                    Мои отклики
+                  </Button>
+                </Link>
+                <Link href="/assignments" onClick={() => setOpen(false)} className="mt-3 block">
+                  <Button type="button" variant="secondary" fullWidth className="rounded-xl text-sm">
+                    Мои назначения
+                  </Button>
+                </Link>
+              </>
+            ) : null}
+          </div>
+
           <div className="pt-3">
             <button
               type="button"
