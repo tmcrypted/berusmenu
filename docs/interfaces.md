@@ -163,9 +163,13 @@ Vacancy create/list uses full timestamp fields:
 
 `GET /v1/vacancies` is role-aware:
 
+- guest sees published vacancies;
 - worker sees published vacancies;
 - owner sees own vacancies;
 - moderator sees all vacancies.
+
+Vacancy payloads include PVZ snapshots captured at creation time:
+`pvz_name_snapshot`, `pvz_city_snapshot`, and `pvz_address_snapshot`.
 
 Moderator matching HTTP routes are exposed under `/v1/moderation/matching/...` for future extraction. Gateway applies a moderator-only gate, and MVP execution remains inside `matching-service`.
 

@@ -131,17 +131,17 @@ func (mr *MockUserRepositoryMockRecorder) MarkEmailVerified(ctx, userID any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkEmailVerified", reflect.TypeOf((*MockUserRepository)(nil).MarkEmailVerified), ctx, userID)
 }
 
-func (m *MockUserRepository) UpdateProfile(ctx context.Context, userID int64, fullName *string, phone *string, avatarURL *string) (store.User, error) {
+func (m *MockUserRepository) UpdateProfile(ctx context.Context, userID int64, lastName *string, firstName *string, middleName *string, birthDate *time.Time, phone *string, avatarURL *string, telegramUsername *string, maxUsername *string) (store.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateProfile", ctx, userID, fullName, phone, avatarURL)
+	ret := m.ctrl.Call(m, "UpdateProfile", ctx, userID, lastName, firstName, middleName, birthDate, phone, avatarURL, telegramUsername, maxUsername)
 	ret0, _ := ret[0].(store.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (mr *MockUserRepositoryMockRecorder) UpdateProfile(ctx, userID, fullName, phone, avatarURL any) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) UpdateProfile(ctx, userID, lastName, firstName, middleName, birthDate, phone, avatarURL, telegramUsername, maxUsername any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProfile", reflect.TypeOf((*MockUserRepository)(nil).UpdateProfile), ctx, userID, fullName, phone, avatarURL)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProfile", reflect.TypeOf((*MockUserRepository)(nil).UpdateProfile), ctx, userID, lastName, firstName, middleName, birthDate, phone, avatarURL, telegramUsername, maxUsername)
 }
 
 func (m *MockUserRepository) BlockUser(ctx context.Context, userID int64, blockedUntil time.Time) (store.User, error) {

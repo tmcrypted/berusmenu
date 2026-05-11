@@ -29,9 +29,14 @@ Important `auth.users` fields:
 - `email_verified_at`
 - `password_hash`
 - `role`
-- `full_name`
+- `last_name`
+- `first_name`
+- `middle_name`
+- `birth_date`
 - `phone`
 - `avatar_url`
+- `telegram_username`
+- `max_username`
 - `status`
 - `blocked_until`
 

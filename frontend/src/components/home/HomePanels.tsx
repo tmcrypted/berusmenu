@@ -1,266 +1,304 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ShiftList } from "@/components/ShiftList";
+import { PvzCard } from "@/components/inventory/PvzCard";
+import { VacancyRow } from "@/components/matching/VacancyRow";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { mockOwnerVacancies } from "@/data/mock-owner";
-import { roleLabel } from "@/lib/profile";
+import { listOwnerPvz } from "@/lib/inventory";
+import { listPublicVacanciesClient, listVacanciesClient } from "@/lib/matching";
+import { displayName, roleLabel } from "@/lib/profile";
 import type { AuthStatus, User } from "@/types/auth";
+import type { Pvz } from "@/types/inventory";
+import type { Vacancy } from "@/types/matching";
 
-export function GuestHomeContent({
-  status,
-  user,
-}: {
-  status: AuthStatus;
-  user: User | null;
-}) {
+export function GuestHomeContent({ status, user }: { status: AuthStatus; user: User | null }) {
+  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [shiftFrom, setShiftFrom] = useState("");
+  const [shiftTo, setShiftTo] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await listPublicVacanciesClient({
+          shift_start_from: toISOString(shiftFrom),
+          shift_start_to: toISOString(shiftTo),
+        }, 20);
+        if (!cancelled) {
+          setVacancies(result.items);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("Не удалось загрузить смены.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [shiftFrom, shiftTo]);
+
   return (
-    <>
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
-              Срочные смены
-            </span>
-            <span className="inline-flex rounded-full border border-[var(--border)] px-3 py-1 text-xs font-medium text-[var(--muted)]">
-              Беру Смену . ру
-            </span>
-          </div>
-          <h1 className="mt-5 max-w-3xl text-3xl font-semibold tracking-tight text-[var(--foreground)] sm:text-4xl lg:text-5xl">
-            Быстрый поиск подмены для ПВЗ и понятный вход в рабочие смены.
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--muted)] sm:text-lg">
-            Маркетплейс срочного подбора на смену в ПВЗ: владельцы публикуют вакансии, исполнители
-            откликаются. Здесь — публичная витрина до полного API.
-          </p>
-          <div className="mt-8 grid gap-3 sm:grid-cols-[1.4fr_1fr]">
-            <label className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--card)] p-3 shadow-[var(--shadow-soft)]">
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-                Поиск
-              </span>
-              <input
-                readOnly
-                value="Сотрудник ПВЗ, Москва"
-                className="w-full bg-transparent text-sm text-[var(--foreground)] outline-none"
-              />
-            </label>
-            <label className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--card)] p-3 shadow-[var(--shadow-soft)]">
-              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-                Дата
-              </span>
-              <input
-                readOnly
-                value="Сегодня и завтра"
-                className="w-full bg-transparent text-sm text-[var(--foreground)] outline-none"
-              />
-            </label>
-          </div>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Button type="button" fullWidth className="sm:w-auto">
-              Ищу смену
-            </Button>
-            <Button type="button" variant="secondary" fullWidth className="sm:w-auto">
-              Ищу сотрудника
-            </Button>
-          </div>
+    <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      <section className="rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">Беру Смену</p>
+        <h1 className="mt-4 max-w-3xl text-3xl font-semibold tracking-tight text-[var(--foreground)] sm:text-4xl lg:text-5xl">
+          Срочные смены для ПВЗ без долгих переписок.
+        </h1>
+        <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--muted)] sm:text-lg">
+          Владельцы публикуют смены, исполнители откликаются, назначение фиксируется в системе.
+        </p>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Link href="/register/worker">
+            <Button type="button" fullWidth className="sm:w-auto">Найти смену</Button>
+          </Link>
+          <Link href="/register/owner">
+            <Button type="button" variant="secondary" fullWidth className="sm:w-auto">Найти исполнителя</Button>
+          </Link>
         </div>
+      </section>
 
-        <aside className="space-y-4 rounded-[2rem] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-            <div className="rounded-[1.5rem] bg-[var(--surface)] p-4">
-              <p className="text-sm text-[var(--muted)]">Демо-карточек смен</p>
-              <p className="mt-2 text-3xl font-semibold">4</p>
-            </div>
-            <div className="rounded-[1.5rem] bg-[var(--surface)] p-4">
-              <p className="text-sm text-[var(--muted)]">Этап</p>
-              <p className="mt-2 text-base font-semibold">Auth + профиль</p>
-            </div>
+      <aside className="rounded-[2rem] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
+        {status !== "anonymous" && user ? (
+          <Alert>
+            <p className="font-medium">Вы вошли как {roleLabel(user.role).toLowerCase()}</p>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              {status === "authenticated_unverified"
+                ? "Подтвердите почту, чтобы открыть рабочие разделы."
+                : status === "authenticated_profile_incomplete"
+                  ? "Завершите профиль, чтобы продолжить."
+                  : "Можно переходить к сменам."}
+            </p>
+          </Alert>
+        ) : (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Как это работает</h2>
+            <Step title="Владелец создает ПВЗ" text="После модерации можно публиковать смены." />
+            <Step title="Исполнитель откликается" text="Отклик сразу попадает владельцу." />
+            <Step title="Владелец назначает исполнителя" text="После смены стороны могут оставить отзыв." />
           </div>
-          {status !== "anonymous" && user ? (
-            <Alert>
-              <p className="font-medium">Вы вошли как {roleLabel(user.role).toLowerCase()}</p>
-              <p className="mt-2 text-sm text-[var(--muted)]">
-                {status === "authenticated_unverified"
-                  ? "Доступ ограничен до подтверждения почты."
-                  : status === "authenticated_profile_incomplete"
-                    ? "Нужно завершить профиль перед полноценной работой."
-                    : user.role === "owner"
-                      ? "Следующий шаг: подать заявку на одобрение ПВЗ."
-                      : "Профиль завершен, можно переходить к откликам."}
-              </p>
-            </Alert>
-          ) : (
-            <Alert>
-              Войдите или зарегистрируйтесь, чтобы перейти от витрины к реальному flow.
-            </Alert>
-          )}
-        </aside>
+        )}
+      </aside>
       </div>
 
-      <section className="mt-8 grid gap-4 md:grid-cols-3">
-        <div className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--card)] p-5">
-          <p className="text-sm font-semibold text-[var(--foreground)]">Для исполнителя</p>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            Зарегистрироваться, подтвердить email, заполнить профиль и перейти к откликам.
-          </p>
-        </div>
-        <div className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--card)] p-5">
-          <p className="text-sm font-semibold text-[var(--foreground)]">Для владельца ПВЗ</p>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            ПВЗ проходят модерацию в inventory-service, вакансии — в matching-service.
-          </p>
-        </div>
-        <div className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--card)] p-5">
-          <p className="text-sm font-semibold text-[var(--foreground)]">Для продукта</p>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            Короткий путь от vacancy к assignment, без лишней инфраструктуры на MVP.
-          </p>
-        </div>
-      </section>
-
-      <section className="mt-8">
-        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Демонстрационная лента смен
-            </h2>
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              Публичная витрина для гостей и пользователей до стадии «мои отклики».
-            </p>
+      <section className="grid gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">
+        <aside className="rounded-[1.5rem] border border-[var(--border)] bg-[var(--panel)] p-4 shadow-[var(--shadow-soft)]">
+          <h2 className="text-lg font-semibold">Смены</h2>
+          <div className="mt-4 space-y-3">
+            <label className="block text-sm font-medium">
+              <span>Смена от</span>
+              <input
+                type="datetime-local"
+                value={shiftFrom}
+                onChange={(event) => setShiftFrom(event.target.value)}
+                className="mt-1 min-h-11 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--accent)]"
+              />
+            </label>
+            <label className="block text-sm font-medium">
+              <span>Смена до</span>
+              <input
+                type="datetime-local"
+                value={shiftTo}
+                onChange={(event) => setShiftTo(event.target.value)}
+                className="mt-1 min-h-11 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--accent)]"
+              />
+            </label>
+            <Button type="button" variant="secondary" fullWidth onClick={() => { setShiftFrom(""); setShiftTo(""); }}>
+              Сбросить
+            </Button>
           </div>
+        </aside>
+        <div className="space-y-3">
+          {loading ? (
+            <p className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 text-sm text-[var(--muted)]">Загружаем смены...</p>
+          ) : error ? (
+            <p className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 text-sm text-[var(--danger)]">{error}</p>
+          ) : vacancies.length === 0 ? (
+            <p className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-sm text-[var(--muted)]">Подходящих смен пока нет.</p>
+          ) : (
+            vacancies.map((vacancy) => <VacancyRow key={vacancy.id} vacancy={vacancy} user={null} />)
+          )}
         </div>
-        <ShiftList />
       </section>
-    </>
+    </div>
   );
 }
 
 export function OwnerHomeContent({ user }: { user: User }) {
+  const [pvz, setPvz] = useState<Pvz[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const result = await listOwnerPvz();
+        if (!cancelled) {
+          setPvz(result.items);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("Не удалось загрузить ПВЗ.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
-    <>
-      <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
-          Кабинет владельца ПВЗ
-        </p>
+    <div className="space-y-6">
+      <section className="rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">Кабинет владельца</p>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-3xl">
-          Здравствуйте{user.full_name?.trim() ? `, ${user.full_name.trim()}` : ""}
+          Здравствуйте{displayName(user, "") ? `, ${displayName(user, "")}` : ""}
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
-          ПВЗ уже работают через inventory-service. Вакансии подключим после matching-service.
+          Управляйте ПВЗ, публикуйте смены и отслеживайте назначения.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/owner/pvz/new">
-            <Button type="button" className="rounded-xl">
-              Добавить ПВЗ
-            </Button>
-          </Link>
-          <Link href="/owner/pvz">
-            <Button type="button" variant="secondary" className="rounded-xl">
-              Мои ПВЗ
-            </Button>
-          </Link>
-          <Button type="button" variant="secondary" className="rounded-xl">
-            Создать вакансию (мок)
-          </Button>
+          <Link href="/owner/pvz"><Button type="button" className="rounded-xl">Мои ПВЗ</Button></Link>
+          <Link href="/owner/vacancies"><Button type="button" variant="secondary" className="rounded-xl">Мои вакансии</Button></Link>
+          <Link href="/assignments"><Button type="button" variant="secondary" className="rounded-xl">Мои назначения</Button></Link>
         </div>
-      </div>
-
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow-soft)]">
-          <h2 className="text-lg font-semibold text-[var(--foreground)]">ПВЗ</h2>
-          <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-            Откройте список ПВЗ, чтобы увидеть реальные статусы модерации, причины отклонения и форму новой заявки.
-          </p>
-          <Link href="/owner/pvz" className="mt-4 inline-flex">
-            <Button type="button" variant="secondary" className="rounded-xl">
-              Перейти к ПВЗ
-            </Button>
-          </Link>
-        </section>
-        <section className="rounded-[1.75rem] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow-soft)]">
-          <h2 className="text-lg font-semibold text-[var(--foreground)]">Мои вакансии</h2>
-          <ul className="mt-4 space-y-3">
-            {mockOwnerVacancies.map((v) => (
-              <li
-                key={v.id}
-                className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3"
-              >
-                <p className="font-medium text-[var(--foreground)]">{v.title}</p>
-                <p className="text-sm text-[var(--muted)]">{v.pvzLabel}</p>
-                <p className="mt-1 text-xs text-[var(--muted)]">
-                  {v.windowLabel} · {v.payLabel}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-    </>
+      </section>
+      <section>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold tracking-tight">Мои ПВЗ</h2>
+          <Link href="/owner/pvz"><Button type="button" variant="secondary" className="rounded-xl">Все ПВЗ</Button></Link>
+        </div>
+        {loading ? (
+          <p className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 text-sm text-[var(--muted)]">Загружаем ПВЗ...</p>
+        ) : error ? (
+          <p className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 text-sm text-[var(--danger)]">{error}</p>
+        ) : pvz.length === 0 ? (
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
+            <p className="text-sm text-[var(--muted)]">У вас пока нет ПВЗ.</p>
+            <Link href="/owner/pvz" className="mt-4 inline-flex"><Button type="button">Перейти к ПВЗ</Button></Link>
+          </div>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {pvz.slice(0, 4).map((item) => <PvzCard key={item.id} pvz={item} />)}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 
 export function ModeratorHomeContent({ user }: { user: User }) {
   return (
-    <>
-      <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
-          Кабинет модератора
-        </p>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-3xl">
-          Здравствуйте{user.full_name?.trim() ? `, ${user.full_name.trim()}` : ""}
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
-          Ваша рабочая зона — очередь заявок ПВЗ. Аккаунты модераторов назначаются через базу данных.
-        </p>
-        <div className="mt-6">
-          <Link href="/moderation/pvz">
-            <Button type="button" className="rounded-xl">
-              Открыть модерацию ПВЗ
-            </Button>
-          </Link>
-        </div>
+    <section className="rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">Кабинет модератора</p>
+      <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-3xl">
+        Здравствуйте{displayName(user, "") ? `, ${displayName(user, "")}` : ""}
+      </h1>
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Link href="/moderation/pvz"><Button type="button" className="rounded-xl">Модерация ПВЗ</Button></Link>
+        <Link href="/moderation/matching"><Button type="button" variant="secondary" className="rounded-xl">Модерация смен</Button></Link>
       </div>
-    </>
+    </section>
   );
 }
 
 export function WorkerHomeContent({ user }: { user: User }) {
+  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const result = await listVacanciesClient({}, 20);
+        if (!cancelled) {
+          setVacancies(result.items);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("Не удалось загрузить ленту смен.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
-    <>
-      <div className="rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">
-          Кабинет исполнителя
-        </p>
+    <div className="space-y-6">
+      <section className="rounded-[2rem] border border-[var(--border)] bg-[var(--panel)] p-6 shadow-[var(--shadow-soft)] sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">Кабинет исполнителя</p>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-3xl">
-          Смены рядом{user.full_name?.trim() ? `, ${user.full_name.trim()}` : ""}
+          Смены рядом{displayName(user, "") ? `, ${displayName(user, "")}` : ""}
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
-          Ниже публичная лента и моки. Отклики и чаты появятся после matching-service и
-          communication-service.
+          Откликайтесь на подходящие смены и отслеживайте свои назначения.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Button type="button" className="rounded-xl">
-            Мои отклики (мок)
-          </Button>
-          <Button type="button" variant="secondary" className="rounded-xl">
-            Сохранённые смены (мок)
-          </Button>
-        </div>
-      </div>
-
-      <section className="mt-8">
-        <h2 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
-          Лента смен для подмены
-        </h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          То же демо, что и на публичной витрине — разделим персональные рекомендации, когда будет
-          API.
-        </p>
-        <div className="mt-5">
-          <ShiftList />
+          <Link href="/vacancies"><Button type="button" className="rounded-xl">Лента смен</Button></Link>
+          <Link href="/responses"><Button type="button" variant="secondary" className="rounded-xl">Мои отклики</Button></Link>
+          <Link href="/assignments"><Button type="button" variant="secondary" className="rounded-xl">Мои назначения</Button></Link>
         </div>
       </section>
-    </>
+      <section>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold tracking-tight">Лента смен</h2>
+          <Link href="/vacancies"><Button type="button" variant="secondary" className="rounded-xl">Все смены</Button></Link>
+        </div>
+        {loading ? (
+          <p className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 text-sm text-[var(--muted)]">Загружаем смены...</p>
+        ) : error ? (
+          <p className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 text-sm text-[var(--danger)]">{error}</p>
+        ) : vacancies.length === 0 ? (
+          <p className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-sm text-[var(--muted)]">Подходящих смен пока нет.</p>
+        ) : (
+          <div className="space-y-3">
+            {vacancies.map((vacancy) => <VacancyRow key={vacancy.id} vacancy={vacancy} user={user} />)}
+          </div>
+        )}
+      </section>
+    </div>
   );
+}
+
+function Step({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-2xl bg-[var(--surface)] p-4">
+      <p className="font-semibold">{title}</p>
+      <p className="mt-1 text-sm leading-6 text-[var(--muted)]">{text}</p>
+    </div>
+  );
+}
+
+function toISOString(value: string) {
+  if (!value) {
+    return undefined;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }

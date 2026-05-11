@@ -6,13 +6,15 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { ApiError } from "@/lib/api";
 import { createResponse } from "@/lib/matching";
+import type { ResponseStatus } from "@/types/matching";
 
 type Props = {
   vacancyId: number;
-  mode: "guest" | "worker";
+  mode: "guest" | "worker" | "complete_profile";
+  existingResponseStatus?: ResponseStatus;
 };
 
-export function ResponseAction({ vacancyId, mode }: Props) {
+export function ResponseAction({ vacancyId, mode, existingResponseStatus }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -24,6 +26,14 @@ export function ResponseAction({ vacancyId, mode }: Props) {
     return (
       <Link href="/login" className="inline-flex">
         <Button type="button">Войти и откликнуться</Button>
+      </Link>
+    );
+  }
+
+  if (mode === "complete_profile") {
+    return (
+      <Link href="/complete-profile/worker" className="inline-flex">
+        <Button type="button" variant="secondary">Завершить профиль</Button>
       </Link>
     );
   }
@@ -42,10 +52,12 @@ export function ResponseAction({ vacancyId, mode }: Props) {
     }
   }
 
-  if (created) {
+  if (created || existingResponseStatus) {
     return (
-      <Link href="/responses" className="inline-flex text-sm font-semibold text-[var(--accent)]">
-        Отклик отправлен. Перейти к моим откликам
+      <Link href="/responses" className="inline-flex">
+        <Button type="button" variant="secondary" className="border-[var(--border-strong)] bg-[var(--muted-bg)] text-[var(--muted)]">
+          Вы откликнулись
+        </Button>
       </Link>
     );
   }
@@ -53,7 +65,7 @@ export function ResponseAction({ vacancyId, mode }: Props) {
   return (
     <div className="space-y-3">
       {!open ? (
-        <Button type="button" onClick={() => setOpen(true)}>
+        <Button type="button" onClick={() => setOpen(true)} className="whitespace-nowrap">
           Откликнуться
         </Button>
       ) : (

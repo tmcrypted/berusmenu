@@ -38,7 +38,7 @@ Planned:
 - email/password auth;
 - HttpOnly cookie web auth with CSRF;
 - email verification code;
-- profile completion after verification;
+- profile completion after verification, including optional messenger usernames;
 - PVZ registration and moderation;
 - moderator timed spam block for abusive owners;
 - vacancy creation;
@@ -118,6 +118,7 @@ Planned:
 - Replies belong only to root reviews and have one nesting level.
 - Chat is read-only after assignment finalization.
 - User rating aggregates are derived from matching root reviews and stored in `matching.user_ratings`.
+- Guests can browse published vacancies, but cannot respond until authenticated and profile-complete.
 - Moderator matching routes are shaped for future extraction, but state changes remain in the owning matching service.
 
 ## Async Rules

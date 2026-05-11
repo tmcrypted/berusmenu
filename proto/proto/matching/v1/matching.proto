@@ -22,6 +22,7 @@ message Vacancy {
   google.protobuf.Timestamp created_at = 12;
   google.protobuf.Timestamp updated_at = 13;
   string pvz_address_snapshot = 14;
+  string pvz_city_snapshot = 15;
 }
 
 message Response {
@@ -47,6 +48,7 @@ message Assignment {
   google.protobuf.Timestamp shift_start_at_snapshot = 10;
   int64 pay_amount_snapshot = 11;
   google.protobuf.Timestamp shift_end_at_snapshot = 12;
+  string pvz_city_snapshot = 13;
   string owner_name_snapshot = 14;
   string worker_name_snapshot = 15;
   optional google.protobuf.Timestamp completed_at = 16;

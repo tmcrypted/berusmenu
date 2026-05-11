@@ -18,9 +18,14 @@ export type LoginInput = {
 };
 
 export type UpdateProfileInput = {
-  full_name?: string;
+  last_name?: string;
+  first_name?: string;
+  middle_name?: string;
+  birth_date?: string;
   phone?: string;
   avatar_url?: string;
+  telegram_username?: string;
+  max_username?: string;
 };
 
 export function register(input: RegisterInput) {

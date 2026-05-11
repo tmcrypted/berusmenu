@@ -2,6 +2,7 @@ package clients
 
 import (
 	"context"
+	"strings"
 
 	"github.com/tmcrypted/berusmenu/matching-service/internal/dto"
 	authv1 "github.com/tmcrypted/berusmenu/proto/gen/go/auth/v1"
@@ -22,9 +23,19 @@ func (c *AuthClient) GetUserByID(ctx context.Context, userID int64) (dto.UserSna
 	}
 	user := res.GetUser()
 	return dto.UserSnapshot{
-		UserID:   user.GetId(),
-		Email:    user.GetEmail(),
-		FullName: user.GetFullName(),
-		Role:     user.GetRole(),
+		UserID:      user.GetId(),
+		Email:       user.GetEmail(),
+		DisplayName: strings.Join(compact(user.GetLastName(), user.GetFirstName(), user.GetMiddleName()), " "),
+		Role:        user.GetRole(),
 	}, nil
+}
+
+func compact(values ...string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }

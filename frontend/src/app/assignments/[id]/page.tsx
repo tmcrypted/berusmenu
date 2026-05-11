@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { AssignmentActions } from "@/components/matching/MutationButtons";
 import { ChatPlaceholder } from "@/components/matching/ChatPlaceholder";
 import { ReviewForm, ReviewCard } from "@/components/matching/ReviewWidgets";
 import { StatusBadge } from "@/components/matching/StatusBadge";
+import { UserSummary } from "@/components/profile/UserSummary";
 import { Button } from "@/components/ui/Button";
 import { money, shiftWindow } from "@/lib/matching-format";
 import { getServerAuthSnapshot } from "@/lib/server-auth";
 import { getAssignment, listReviews } from "@/lib/server-matching";
+import { getPublicUser } from "@/lib/server-users";
 
 export const metadata: Metadata = {
   title: "Назначение | Беру Смену",
@@ -24,7 +27,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   const assignment = assignmentResult.data;
   const canComplete = auth.user?.id === assignment.owner_id;
-  const reviewsResult = await listReviews();
+  const [reviewsResult, ownerResult, workerResult] = await Promise.all([
+    listReviews(),
+    getPublicUser(assignment.owner_id),
+    getPublicUser(assignment.worker_id),
+  ]);
+  const owner = ownerResult.ok ? ownerResult.data : null;
+  const worker = workerResult.ok ? workerResult.data : null;
   const assignmentReviews = reviewsResult.ok
     ? reviewsResult.data.items.filter((review) => review.assignment_id === assignment.id)
     : [];
@@ -39,10 +48,14 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             <h1 className="mt-4 text-3xl font-semibold">{assignment.pvz_name_snapshot}</h1>
             <p className="mt-2 text-sm text-[var(--muted)]">{assignment.pvz_address_snapshot}</p>
             <p className="mt-4 text-sm">{shiftWindow(assignment.shift_start_at_snapshot, assignment.shift_end_at_snapshot)} · {money(assignment.pay_amount_snapshot)}</p>
-            <dl className="mt-6 grid gap-3 sm:grid-cols-2">
-              <Info label="Владелец" value={assignment.owner_name_snapshot || `#${assignment.owner_id}`} />
-              <Info label="Исполнитель" value={assignment.worker_name_snapshot || `#${assignment.worker_id}`} />
-            </dl>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <Participant title="Владелец">
+                <UserSummary user={owner} fallbackId={assignment.owner_id} compact />
+              </Participant>
+              <Participant title="Исполнитель">
+                <UserSummary user={worker} fallbackId={assignment.worker_id} compact />
+              </Participant>
+            </div>
           </div>
           <aside className="space-y-4 rounded-[2rem] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[var(--shadow-soft)]">
             <h2 className="text-lg font-semibold">Действия</h2>
@@ -54,7 +67,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           <div className="mt-6 space-y-4">
             <ReviewForm assignmentId={assignment.id} />
             {assignmentReviews.map((review) => (
-              <ReviewCard key={review.id} review={review} />
+              <ReviewCard
+                key={review.id}
+                review={review}
+                assignment={assignment}
+                author={review.author_user_id === assignment.owner_id ? owner : worker}
+              />
             ))}
           </div>
         ) : null}
@@ -63,8 +81,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   );
 }
 
-function Info({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-2xl bg-[var(--surface)] p-3"><dt className="text-xs uppercase tracking-[0.12em] text-[var(--muted)]">{label}</dt><dd className="mt-1 font-medium">{value}</dd></div>;
+function Participant({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-2xl bg-[var(--surface)] p-3">
+      <p className="mb-2 text-xs uppercase tracking-[0.12em] text-[var(--muted)]">{title}</p>
+      {children}
+    </div>
+  );
 }
 
 function Message({ text }: { text: string }) {

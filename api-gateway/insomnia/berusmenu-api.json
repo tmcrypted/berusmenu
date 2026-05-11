@@ -374,6 +374,29 @@
       "_type": "request"
     },
     {
+      "_id": "req_profile_get_public_user",
+      "parentId": "fld_profile",
+      "modified": 1778083200000,
+      "created": 1778083200000,
+      "url": "{{ _.base_url }}/v1/users/1",
+      "name": "Get Public User",
+      "description": "Requires a verified email. Returns public profile fields without email or phone.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 150,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
       "_id": "req_profile_update_me",
       "parentId": "fld_profile",
       "modified": 1778083200000,
@@ -384,7 +407,7 @@
       "method": "PATCH",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"full_name\": \"Updated Worker User\",\n  \"phone\": \"+79990001122\"\n}"
+        "text": "{\n  \"last_name\": \"Ivanov\",\n  \"first_name\": \"Ivan\",\n  \"middle_name\": \"Ivanovich\",\n  \"birth_date\": \"1995-04-10\",\n  \"phone\": \"+79990001122\",\n  \"telegram_username\": \"ivan_worker\",\n  \"max_username\": \"ivan_worker\"\n}"
       },
       "parameters": [],
       "headers": [

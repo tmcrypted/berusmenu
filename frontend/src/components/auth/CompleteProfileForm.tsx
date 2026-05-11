@@ -20,7 +20,13 @@ import { AuthGuard } from "./AuthGuard";
 import { AuthShell } from "./AuthShell";
 
 const schema = z.object({
-  full_name: z.string().trim().min(2, "Введите имя или ФИО"),
+  last_name: z.string().trim().min(2, "Введите фамилию"),
+  first_name: z.string().trim().min(2, "Введите имя"),
+  middle_name: z.string().optional().transform((s) => (s ?? "").trim()),
+  birth_date: z.string().trim().refine((s) => {
+    const date = new Date(`${s}T00:00:00`);
+    return s && !Number.isNaN(date.getTime()) && date < new Date();
+  }, "Укажите дату рождения"),
   phone: z
     .string()
     .trim()
@@ -35,6 +41,8 @@ const schema = z.object({
     .refine((s) => s === "" || /^https?:\/\/.+/i.test(s), {
       message: "Введите корректный URL или оставьте поле пустым",
     }),
+  telegram_username: z.string().optional().transform((s) => (s ?? "").trim().replace(/^@+/, "")),
+  max_username: z.string().optional().transform((s) => (s ?? "").trim().replace(/^@+/, "")),
 });
 
 type FormInput = z.input<typeof schema>;
@@ -57,9 +65,14 @@ export function CompleteProfileForm({ role }: Props) {
   } = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      full_name: "",
+      last_name: "",
+      first_name: "",
+      middle_name: "",
+      birth_date: "",
       phone: "",
       avatar_url: "",
+      telegram_username: "",
+      max_username: "",
     },
   });
 
@@ -74,18 +87,28 @@ export function CompleteProfileForm({ role }: Props) {
         ? formatRuMobileDisplay(normalized)
         : rawPhone;
     reset({
-      full_name: user.full_name ?? "",
+      last_name: user.last_name ?? "",
+      first_name: user.first_name ?? "",
+      middle_name: user.middle_name ?? "",
+      birth_date: user.birth_date ?? "",
       phone: phoneDisplay,
       avatar_url: user.avatar_url ?? "",
+      telegram_username: user.telegram_username ?? "",
+      max_username: user.max_username ?? "",
     });
   }, [user, reset]);
 
   async function onSubmit(values: FormValues) {
     try {
       const updated = await updateMe({
-        full_name: values.full_name,
+        last_name: values.last_name,
+        first_name: values.first_name,
+        middle_name: values.middle_name || undefined,
+        birth_date: values.birth_date,
         phone: values.phone,
         avatar_url: values.avatar_url?.trim() ? values.avatar_url : undefined,
+        telegram_username: values.telegram_username || undefined,
+        max_username: values.max_username || undefined,
       });
 
       setReady(normalizeApiUser(updated));
@@ -126,17 +149,19 @@ export function CompleteProfileForm({ role }: Props) {
           ) : null}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {errors.root?.message ? <Alert tone="error">{errors.root.message}</Alert> : null}
-            <Field
-              label="Имя или ФИО"
-              htmlFor="complete-profile-name"
-              error={errors.full_name?.message}
-            >
-              <Input
-                id="complete-profile-name"
-                autoComplete="name"
-                placeholder="Как к вам обращаться"
-                {...register("full_name")}
-              />
+            <div className="grid gap-5 md:grid-cols-2">
+              <Field label="Фамилия" htmlFor="complete-profile-last-name" error={errors.last_name?.message}>
+                <Input id="complete-profile-last-name" autoComplete="family-name" placeholder="Иванов" {...register("last_name")} />
+              </Field>
+              <Field label="Имя" htmlFor="complete-profile-first-name" error={errors.first_name?.message}>
+                <Input id="complete-profile-first-name" autoComplete="given-name" placeholder="Иван" {...register("first_name")} />
+              </Field>
+            </div>
+            <Field label="Отчество" htmlFor="complete-profile-middle-name" hint="Необязательно" error={errors.middle_name?.message}>
+              <Input id="complete-profile-middle-name" autoComplete="additional-name" placeholder="Иванович" {...register("middle_name")} />
+            </Field>
+            <Field label="Дата рождения" htmlFor="complete-profile-birth-date" error={errors.birth_date?.message}>
+              <Input id="complete-profile-birth-date" type="date" {...register("birth_date")} />
             </Field>
             <Field
               label="Телефон"
@@ -166,6 +191,14 @@ export function CompleteProfileForm({ role }: Props) {
                 {...register("avatar_url")}
               />
             </Field>
+            <div className="grid gap-5 md:grid-cols-2">
+              <Field label="Telegram" htmlFor="complete-profile-telegram" hint="Необязательно" error={errors.telegram_username?.message}>
+                <Input id="complete-profile-telegram" placeholder="@username" {...register("telegram_username")} />
+              </Field>
+              <Field label="Max" htmlFor="complete-profile-max" hint="Необязательно" error={errors.max_username?.message}>
+                <Input id="complete-profile-max" placeholder="username" {...register("max_username")} />
+              </Field>
+            </div>
             <Button type="submit" fullWidth disabled={isSubmitting}>
               {isSubmitting ? "Сохраняем..." : "Сохранить и продолжить"}
             </Button>

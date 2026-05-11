@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS matching.vacancies (
     shift_start_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     shift_end_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '8 hours',
     pvz_address_snapshot TEXT NOT NULL DEFAULT '',
+    pvz_city_snapshot TEXT NOT NULL DEFAULT '',
     pay_amount BIGINT NOT NULL DEFAULT 1,
     slots_total INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -23,6 +24,9 @@ ALTER TABLE matching.vacancies
 
 ALTER TABLE matching.vacancies
     ADD COLUMN IF NOT EXISTS pvz_address_snapshot TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE matching.vacancies
+    ADD COLUMN IF NOT EXISTS pvz_city_snapshot TEXT NOT NULL DEFAULT '';
 
 DO $$
 BEGIN
@@ -97,7 +101,8 @@ SET shift_start_at = COALESCE(shift_start_at, created_at, NOW()),
     pay_amount = CASE WHEN pay_amount IS NULL OR pay_amount <= 0 THEN 1 ELSE pay_amount END,
     slots_total = 1,
     pvz_name_snapshot = COALESCE(pvz_name_snapshot, ''),
-    pvz_address_snapshot = COALESCE(pvz_address_snapshot, '');
+    pvz_address_snapshot = COALESCE(pvz_address_snapshot, ''),
+    pvz_city_snapshot = COALESCE(pvz_city_snapshot, '');
 
 UPDATE matching.vacancies
 SET shift_end_at = shift_start_at + INTERVAL '8 hours'
@@ -106,6 +111,7 @@ WHERE shift_end_at <= shift_start_at;
 ALTER TABLE matching.vacancies
     ALTER COLUMN pvz_name_snapshot SET NOT NULL,
     ALTER COLUMN pvz_address_snapshot SET NOT NULL,
+    ALTER COLUMN pvz_city_snapshot SET NOT NULL,
     ALTER COLUMN shift_start_at SET NOT NULL,
     ALTER COLUMN shift_end_at SET NOT NULL,
     ALTER COLUMN pay_amount SET NOT NULL,

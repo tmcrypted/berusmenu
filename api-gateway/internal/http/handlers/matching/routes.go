@@ -27,6 +27,9 @@ func RegisterRoutes(
 ) {
 	handler := Handler{matching: client}
 
+	group.GET("/public/vacancies", handler.ListVacancies)
+	group.GET("/public/vacancies/:id", handler.GetVacancy)
+
 	authorized := group.Group("", authMiddleware, verifiedMiddleware)
 	authorized.POST("/vacancies", csrfMiddleware, handler.CreateVacancy)
 	authorized.GET("/vacancies", handler.ListVacancies)

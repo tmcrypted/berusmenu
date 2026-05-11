@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { logout } from "@/lib/auth";
-import { getProfileNavHref, roleLabel } from "@/lib/profile";
+import { displayName, getProfileNavHref, roleLabel } from "@/lib/profile";
 import type { AuthStatus, User } from "@/types/auth";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "./ui/Button";
@@ -84,7 +84,7 @@ export function AccountMenu({ user, status }: Props) {
               Профиль
             </p>
             <p className="mt-2 text-sm font-medium text-[var(--foreground)]">
-              {user.full_name?.trim() || "—"}
+              {displayName(user, "—")}
             </p>
             <p className="mt-1 truncate text-sm text-[var(--muted)]">{user.email}</p>
             <p className="mt-1 text-sm text-[var(--muted)]">{user.phone?.trim() || "—"}</p>
@@ -117,11 +117,7 @@ export function AccountMenu({ user, status }: Props) {
                 </Button>
               </Link>
               {isOwner ? (
-                <Link href="/owner/pvz/new" onClick={() => setOpen(false)} className="mt-3 block">
-                  <Button type="button" fullWidth className="rounded-xl text-sm">
-                    Новый ПВЗ
-                  </Button>
-                </Link>
+                null
               ) : null}
             </div>
           ) : null}
@@ -139,13 +135,15 @@ export function AccountMenu({ user, status }: Props) {
                 {isOwner ? "Мои вакансии" : isModerator ? "Модерация matching" : "Лента смен"}
               </Button>
             </Link>
-            {!isOwner && !isModerator ? (
+            {!isModerator ? (
               <>
-                <Link href="/responses" onClick={() => setOpen(false)} className="mt-3 block">
-                  <Button type="button" variant="secondary" fullWidth className="rounded-xl text-sm">
-                    Мои отклики
-                  </Button>
-                </Link>
+                {!isOwner ? (
+                  <Link href="/responses" onClick={() => setOpen(false)} className="mt-3 block">
+                    <Button type="button" variant="secondary" fullWidth className="rounded-xl text-sm">
+                      Мои отклики
+                    </Button>
+                  </Link>
+                ) : null}
                 <Link href="/assignments" onClick={() => setOpen(false)} className="mt-3 block">
                   <Button type="button" variant="secondary" fullWidth className="rounded-xl text-sm">
                     Мои назначения

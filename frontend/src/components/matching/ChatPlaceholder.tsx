@@ -9,11 +9,11 @@ export function ChatPlaceholder({ response, assignment }: Props) {
   return (
     <section className="rounded-[1.5rem] border border-dashed border-[var(--border-strong)] bg-[var(--surface)] p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
-        Chat placeholder
+        Чат
       </p>
-      <h2 className="mt-2 text-lg font-semibold text-[var(--foreground)]">Чат-заглушка</h2>
+      <h2 className="mt-2 text-lg font-semibold text-[var(--foreground)]">Диалог по смене</h2>
       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-        Communication-service еще не запущен, поэтому сообщения здесь read-only mock. Реальные chat endpoints не вызываются.
+        Здесь будет переписка между владельцем и исполнителем.
       </p>
       <div className="mt-4 space-y-3 text-sm">
         {response?.message ? (

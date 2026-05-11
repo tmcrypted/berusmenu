@@ -35,7 +35,7 @@ export function PvzCard({ pvz }: Props) {
 
       {pvz.status === "approved" ? (
         <p className="mt-4 text-sm text-[var(--muted)]">
-          ПВЗ одобрен. Создание вакансий появится после подключения matching-flow.
+          ПВЗ одобрен, можно публиковать смены.
         </p>
       ) : pvz.status === "blocked" ? (
         <p className="mt-4 text-sm text-[var(--muted)]">

@@ -47,8 +47,8 @@ export async function listResponsesForVacancy(vacancyId: number): Promise<Server
   return mapResult(await serverApiRequest<unknown>(`/v1/vacancies/${vacancyId}/responses?page_size=50`), normalizeResponseList);
 }
 
-export async function listMyResponses(pageToken?: string): Promise<ServerApiResult<ResponseListResponse>> {
-  const query = pageToken ? `?page_size=20&page_token=${encodeURIComponent(pageToken)}` : "?page_size=20";
+export async function listMyResponses(pageToken?: string, pageSize = 20): Promise<ServerApiResult<ResponseListResponse>> {
+  const query = pageToken ? `?page_size=${pageSize}&page_token=${encodeURIComponent(pageToken)}` : `?page_size=${pageSize}`;
   return mapResult(await serverApiRequest<unknown>(`/v1/responses/me${query}`), normalizeResponseList);
 }
 

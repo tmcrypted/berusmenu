@@ -35,8 +35,8 @@ func NewEventID() (string, error) {
 
 func (s *Store) CreateVacancy(ctx context.Context, input Vacancy) (Vacancy, error) {
 	sql, args, err := psql.Insert("matching.vacancies").
-		Columns("owner_id", "pvz_id", "status", "title", "description", "shift_start_at", "shift_end_at", "pvz_name_snapshot", "pvz_address_snapshot", "pay_amount", "slots_total").
-		Values(input.OwnerID, input.PvzID, vacancyStatusToDB(commonv1.VacancyStatus_VACANCY_STATUS_PUBLISHED), input.Title, input.Description, input.ShiftStartAt, input.ShiftEndAt, input.PvzNameSnapshot, input.PvzAddressSnapshot, input.PayAmount, input.SlotsTotal).
+		Columns("owner_id", "pvz_id", "status", "title", "description", "shift_start_at", "shift_end_at", "pvz_name_snapshot", "pvz_address_snapshot", "pvz_city_snapshot", "pay_amount", "slots_total").
+		Values(input.OwnerID, input.PvzID, vacancyStatusToDB(commonv1.VacancyStatus_VACANCY_STATUS_PUBLISHED), input.Title, input.Description, input.ShiftStartAt, input.ShiftEndAt, input.PvzNameSnapshot, input.PvzAddressSnapshot, input.PvzCitySnapshot, input.PayAmount, input.SlotsTotal).
 		Suffix("RETURNING " + vacancyColumns()).
 		ToSql()
 	if err != nil {
@@ -225,8 +225,8 @@ func (s *Store) AcceptResponse(ctx context.Context, input AssignmentSnapshotInpu
 	}
 
 	sql, args, err := psql.Insert("matching.assignments").
-		Columns("vacancy_id", "response_id", "owner_id", "worker_id", "status", "pvz_name_snapshot", "pvz_address_snapshot", "shift_start_at_snapshot", "pay_amount_snapshot", "shift_end_at_snapshot", "owner_name_snapshot", "worker_name_snapshot").
-		Values(input.Vacancy.ID, accepted.ID, input.Vacancy.OwnerID, input.WorkerID, assignmentStatusToDB(commonv1.AssignmentStatus_ASSIGNMENT_STATUS_ACTIVE), input.PvzNameSnapshot, input.PvzAddressSnapshot, input.Vacancy.ShiftStartAt, input.Vacancy.PayAmount, input.Vacancy.ShiftEndAt, input.OwnerNameSnapshot, input.WorkerNameSnapshot).
+		Columns("vacancy_id", "response_id", "owner_id", "worker_id", "status", "pvz_name_snapshot", "pvz_address_snapshot", "pvz_city_snapshot", "shift_start_at_snapshot", "pay_amount_snapshot", "shift_end_at_snapshot", "owner_name_snapshot", "worker_name_snapshot").
+		Values(input.Vacancy.ID, accepted.ID, input.Vacancy.OwnerID, input.WorkerID, assignmentStatusToDB(commonv1.AssignmentStatus_ASSIGNMENT_STATUS_ACTIVE), input.PvzNameSnapshot, input.PvzAddressSnapshot, input.PvzCitySnapshot, input.Vacancy.ShiftStartAt, input.Vacancy.PayAmount, input.Vacancy.ShiftEndAt, input.OwnerNameSnapshot, input.WorkerNameSnapshot).
 		Suffix("RETURNING " + assignmentColumns()).
 		ToSql()
 	if err != nil {
@@ -618,7 +618,7 @@ func isUniqueViolation(err error) bool {
 func scanVacancy(row pgx.Row) (Vacancy, error) {
 	var item Vacancy
 	var status string
-	err := row.Scan(&item.ID, &item.OwnerID, &item.PvzID, &status, &item.Title, &item.Description, &item.ShiftStartAt, &item.ShiftEndAt, &item.PvzNameSnapshot, &item.PvzAddressSnapshot, &item.PayAmount, &item.SlotsTotal, &item.CreatedAt, &item.UpdatedAt)
+	err := row.Scan(&item.ID, &item.OwnerID, &item.PvzID, &status, &item.Title, &item.Description, &item.ShiftStartAt, &item.ShiftEndAt, &item.PvzNameSnapshot, &item.PvzAddressSnapshot, &item.PvzCitySnapshot, &item.PayAmount, &item.SlotsTotal, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		return Vacancy{}, rowErr(err)
 	}
@@ -640,7 +640,7 @@ func scanResponse(row pgx.Row) (Response, error) {
 func scanAssignment(row pgx.Row) (Assignment, error) {
 	var item Assignment
 	var status string
-	err := row.Scan(&item.ID, &item.VacancyID, &item.ResponseID, &item.OwnerID, &item.WorkerID, &status, &item.AcceptedAt, &item.PvzNameSnapshot, &item.PvzAddressSnapshot, &item.ShiftStartAtSnapshot, &item.PayAmountSnapshot, &item.ShiftEndAtSnapshot, &item.OwnerNameSnapshot, &item.WorkerNameSnapshot, &item.CompletedAt, &item.CancelledAt, &item.CancelledByUserID, &item.CancelReason, &item.UpdatedAt, &item.CreatedAt)
+	err := row.Scan(&item.ID, &item.VacancyID, &item.ResponseID, &item.OwnerID, &item.WorkerID, &status, &item.AcceptedAt, &item.PvzNameSnapshot, &item.PvzAddressSnapshot, &item.PvzCitySnapshot, &item.ShiftStartAtSnapshot, &item.PayAmountSnapshot, &item.ShiftEndAtSnapshot, &item.OwnerNameSnapshot, &item.WorkerNameSnapshot, &item.CompletedAt, &item.CancelledAt, &item.CancelledByUserID, &item.CancelReason, &item.UpdatedAt, &item.CreatedAt)
 	if err != nil {
 		return Assignment{}, rowErr(err)
 	}
@@ -676,7 +676,7 @@ func rowErr(err error) error {
 }
 
 func vacancyColumns() string {
-	return "id, owner_id, pvz_id, status, title, description, shift_start_at, shift_end_at, pvz_name_snapshot, pvz_address_snapshot, pay_amount, slots_total, created_at, updated_at"
+	return "id, owner_id, pvz_id, status, title, description, shift_start_at, shift_end_at, pvz_name_snapshot, pvz_address_snapshot, pvz_city_snapshot, pay_amount, slots_total, created_at, updated_at"
 }
 
 func responseColumns() string {
@@ -684,7 +684,7 @@ func responseColumns() string {
 }
 
 func assignmentColumns() string {
-	return "id, vacancy_id, response_id, owner_id, worker_id, status, accepted_at, pvz_name_snapshot, pvz_address_snapshot, shift_start_at_snapshot, pay_amount_snapshot, shift_end_at_snapshot, owner_name_snapshot, worker_name_snapshot, completed_at, cancelled_at, cancelled_by_user_id, cancel_reason, updated_at, created_at"
+	return "id, vacancy_id, response_id, owner_id, worker_id, status, accepted_at, pvz_name_snapshot, pvz_address_snapshot, pvz_city_snapshot, shift_start_at_snapshot, pay_amount_snapshot, shift_end_at_snapshot, owner_name_snapshot, worker_name_snapshot, completed_at, cancelled_at, cancelled_by_user_id, cancel_reason, updated_at, created_at"
 }
 
 func reviewColumns() string {

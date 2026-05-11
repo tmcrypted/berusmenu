@@ -27,7 +27,6 @@ func TestRegister(t *testing.T) {
 			input: dto.RegisterInput{
 				Email:    " OWNER@EXAMPLE.COM ",
 				Password: "password123",
-				FullName: " Owner User ",
 				Role:     commonv1.UserRole_USER_ROLE_OWNER,
 			},
 			setup: func(users *MockUserRepository, verificationStore *MockVerificationStore, publisher *MockEventPublisher) {
@@ -55,7 +54,6 @@ func TestRegister(t *testing.T) {
 			input: dto.RegisterInput{
 				Email:    "owner@example.com",
 				Password: "password123",
-				FullName: "Owner User",
 			},
 			setup: func(users *MockUserRepository, verificationStore *MockVerificationStore, publisher *MockEventPublisher) {
 				users.EXPECT().CreateUserWithSession(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(store.User{}, store.ErrAlreadyExists)
@@ -77,7 +75,6 @@ func TestRegister(t *testing.T) {
 			input: dto.RegisterInput{
 				Email:    "owner@example.com",
 				Password: "password123",
-				FullName: "Owner User",
 			},
 			setup: func(users *MockUserRepository, verificationStore *MockVerificationStore, publisher *MockEventPublisher) {
 				user := sampleUser()
@@ -454,7 +451,8 @@ func sampleUser() store.User {
 		Email:        "worker@example.com",
 		PasswordHash: "hash",
 		Role:         commonv1.UserRole_USER_ROLE_WORKER,
-		FullName:     "Worker User",
+		LastName:     "User",
+		FirstName:    "Worker",
 		Status:       "active",
 		CreatedAt:    now,
 		UpdatedAt:    now,

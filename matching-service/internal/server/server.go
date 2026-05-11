@@ -54,10 +54,7 @@ func (s *Server) CreateVacancy(ctx context.Context, req *matchingv1.CreateVacanc
 }
 
 func (s *Server) GetVacancy(ctx context.Context, req *matchingv1.GetVacancyRequest) (*matchingv1.GetVacancyResponse, error) {
-	actor, err := actorFromMetadata(ctx)
-	if err != nil {
-		return nil, err
-	}
+	actor := optionalActorFromMetadata(ctx)
 	vacancy, err := s.matching.GetVacancy(ctx, dto.IDInput{Actor: actor, ID: req.GetId()})
 	if err != nil {
 		return nil, toGRPCError(err)
@@ -66,10 +63,7 @@ func (s *Server) GetVacancy(ctx context.Context, req *matchingv1.GetVacancyReque
 }
 
 func (s *Server) ListVacancies(ctx context.Context, req *matchingv1.ListVacanciesRequest) (*matchingv1.ListVacanciesResponse, error) {
-	actor, err := actorFromMetadata(ctx)
-	if err != nil {
-		return nil, err
-	}
+	actor := optionalActorFromMetadata(ctx)
 	var from, to *timeWrapper
 	if req.ShiftStartFrom != nil {
 		from = &timeWrapper{req.ShiftStartFrom.AsTime()}
@@ -378,6 +372,14 @@ func actorFromMetadata(ctx context.Context) (dto.Actor, error) {
 		email = values[0]
 	}
 	return dto.Actor{UserID: userID, Role: role, Email: email}, nil
+}
+
+func optionalActorFromMetadata(ctx context.Context) dto.Actor {
+	actor, err := actorFromMetadata(ctx)
+	if err == nil {
+		return actor
+	}
+	return dto.Actor{Role: commonv1.UserRole_USER_ROLE_WORKER}
 }
 
 func metadataInt64(md metadata.MD, key string) (int64, error) {

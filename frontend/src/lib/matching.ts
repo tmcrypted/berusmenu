@@ -88,6 +88,7 @@ export function normalizeVacancy(raw: unknown): Vacancy {
     shift_start_at: str(r.shift_start_at),
     shift_end_at: str(r.shift_end_at),
     pvz_name_snapshot: str(r.pvz_name_snapshot),
+    pvz_city_snapshot: optStr(r.pvz_city_snapshot),
     pvz_address_snapshot: str(r.pvz_address_snapshot),
     pay_amount: num(r.pay_amount),
     slots_total: num(r.slots_total),
@@ -120,6 +121,7 @@ export function normalizeAssignment(raw: unknown): Assignment {
     status: status(r.status, ASSIGNMENT_STATUS, "unspecified"),
     accepted_at: str(r.accepted_at),
     pvz_name_snapshot: str(r.pvz_name_snapshot),
+    pvz_city_snapshot: optStr(r.pvz_city_snapshot),
     pvz_address_snapshot: str(r.pvz_address_snapshot),
     shift_start_at_snapshot: str(r.shift_start_at_snapshot),
     shift_end_at_snapshot: str(r.shift_end_at_snapshot),
@@ -225,6 +227,14 @@ export function matchingQuery(filters: VacancyFilters = {}, pageSize = 20) {
 
 export async function createVacancy(input: CreateVacancyInput) {
   return normalizeVacancy(await apiRequest<unknown>("/v1/vacancies", { method: "POST", body: input }));
+}
+
+export async function listVacanciesClient(filters: VacancyFilters = {}, pageSize = 20) {
+  return normalizeVacancyList(await apiRequest<unknown>(`/v1/vacancies?${matchingQuery(filters, pageSize)}`));
+}
+
+export async function listPublicVacanciesClient(filters: VacancyFilters = {}, pageSize = 20) {
+  return normalizeVacancyList(await apiRequest<unknown>(`/v1/public/vacancies?${matchingQuery(filters, pageSize)}`));
 }
 
 export async function createResponse(vacancyId: number, message?: string) {

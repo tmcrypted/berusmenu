@@ -41,7 +41,6 @@ func (s *Server) Register(ctx context.Context, req *authv1.RegisterRequest) (*au
 	auth, err := s.auth.Register(ctx, dto.RegisterInput{
 		Email:    req.GetEmail(),
 		Password: req.GetPassword(),
-		FullName: req.GetFullName(),
 		Role:     req.GetRole(),
 		Phone:    req.Phone,
 	})
@@ -144,10 +143,15 @@ func (s *Server) UpdateProfile(ctx context.Context, req *authv1.UpdateProfileReq
 		return nil, err
 	}
 	user, err := s.auth.UpdateProfile(ctx, dto.UpdateProfileInput{
-		UserID:    userID,
-		FullName:  req.FullName,
-		Phone:     req.Phone,
-		AvatarURL: req.AvatarUrl,
+		UserID:           userID,
+		LastName:         req.LastName,
+		FirstName:        req.FirstName,
+		MiddleName:       req.MiddleName,
+		BirthDate:        req.BirthDate,
+		Phone:            req.Phone,
+		AvatarURL:        req.AvatarUrl,
+		TelegramUsername: req.TelegramUsername,
+		MaxUsername:      req.MaxUsername,
 	})
 	if err != nil {
 		return nil, toGRPCError(err)
@@ -198,14 +202,24 @@ func toProtoAuthPayload(auth dto.AuthPayload) *authv1.AuthPayload {
 
 func toProtoUser(user store.User) *authv1.User {
 	out := &authv1.User{
-		Id:        user.ID,
-		Email:     user.Email,
-		Role:      user.Role,
-		FullName:  user.FullName,
-		Phone:     user.Phone,
-		AvatarUrl: user.AvatarURL,
-		CreatedAt: timestamppb.New(user.CreatedAt),
-		UpdatedAt: timestamppb.New(user.UpdatedAt),
+		Id:               user.ID,
+		Email:            user.Email,
+		Role:             user.Role,
+		LastName:         user.LastName,
+		FirstName:        user.FirstName,
+		Phone:            user.Phone,
+		AvatarUrl:        user.AvatarURL,
+		TelegramUsername: user.TelegramUsername,
+		MaxUsername:      user.MaxUsername,
+		CreatedAt:        timestamppb.New(user.CreatedAt),
+		UpdatedAt:        timestamppb.New(user.UpdatedAt),
+	}
+	if user.MiddleName != nil {
+		out.MiddleName = user.MiddleName
+	}
+	if user.BirthDate != nil {
+		value := user.BirthDate.Format("2006-01-02")
+		out.BirthDate = &value
 	}
 	if user.EmailVerifiedAt != nil {
 		out.EmailVerifiedAt = timestamppb.New(*user.EmailVerifiedAt)

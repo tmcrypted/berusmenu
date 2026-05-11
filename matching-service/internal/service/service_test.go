@@ -182,7 +182,7 @@ func (fakeInventory) CheckPvzForVacancy(ctx context.Context, pvzID int64) (dto.P
 type fakeAuth struct{}
 
 func (fakeAuth) GetUserByID(ctx context.Context, userID int64) (dto.UserSnapshot, error) {
-	return dto.UserSnapshot{UserID: userID, Email: "user@example.com", FullName: "User", Role: commonv1.UserRole_USER_ROLE_OWNER}, nil
+	return dto.UserSnapshot{UserID: userID, Email: "user@example.com", DisplayName: "User", Role: commonv1.UserRole_USER_ROLE_OWNER}, nil
 }
 
 type fakeEvents struct{}

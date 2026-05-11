@@ -108,6 +108,7 @@ func (s *Service) CreateVacancy(ctx context.Context, input dto.CreateVacancyInpu
 		ShiftEndAt:         input.ShiftEndAt,
 		PvzNameSnapshot:    pvz.CompanyName,
 		PvzAddressSnapshot: pvz.Address,
+		PvzCitySnapshot:    pvz.City,
 		PayAmount:          input.PayAmount,
 		SlotsTotal:         input.SlotsTotal,
 	})
@@ -129,7 +130,7 @@ func (s *Service) GetVacancy(ctx context.Context, input dto.IDInput) (store.Vaca
 }
 
 func (s *Service) ListVacancies(ctx context.Context, input dto.ListVacanciesInput) ([]store.Vacancy, *string, error) {
-	if input.Actor.UserID <= 0 {
+	if input.Actor.UserID <= 0 && input.Actor.Role != commonv1.UserRole_USER_ROLE_WORKER {
 		return nil, nil, serviceError(ErrUnauthenticated, "missing authenticated user")
 	}
 	page, err := pageFrom(input.PageSize, input.PageToken)
@@ -287,8 +288,9 @@ func (s *Service) AcceptResponse(ctx context.Context, input dto.AcceptResponseIn
 		WorkerID:           response.WorkerID,
 		PvzNameSnapshot:    vacancy.PvzNameSnapshot,
 		PvzAddressSnapshot: vacancy.PvzAddressSnapshot,
-		OwnerNameSnapshot:  owner.FullName,
-		WorkerNameSnapshot: worker.FullName,
+		PvzCitySnapshot:    vacancy.PvzCitySnapshot,
+		OwnerNameSnapshot:  owner.DisplayName,
+		WorkerNameSnapshot: worker.DisplayName,
 	}, admin)
 	if err != nil {
 		return store.Assignment{}, notFoundOrInternal(err, "response cannot be accepted", "failed to accept response")

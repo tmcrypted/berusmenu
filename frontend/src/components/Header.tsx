@@ -20,6 +20,25 @@ export function Header() {
       : status === "authenticated_unverified"
         ? "/verify-email"
         : "/";
+  const ready = status === "authenticated_ready" && user;
+  const navLinks = ready
+    ? user.role === "owner"
+      ? [
+          { href: "/owner/pvz", label: "ПВЗ" },
+          { href: "/owner/vacancies", label: "Вакансии" },
+          { href: "/assignments", label: "Назначения" },
+        ]
+      : user.role === "moderator"
+        ? [
+            { href: "/moderation/pvz", label: "ПВЗ" },
+            { href: "/moderation/matching", label: "Смены" },
+          ]
+        : [
+            { href: "/vacancies", label: "Лента" },
+            { href: "/responses", label: "Отклики" },
+            { href: "/assignments", label: "Назначения" },
+          ]
+    : [];
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 flex h-[var(--header-height)] items-center border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_88%,transparent)] backdrop-blur-xl">
@@ -30,6 +49,15 @@ export function Header() {
             <span className="font-medium text-[var(--muted)]">.ру</span>
           </span>
         </Link>
+        {navLinks.length > 0 ? (
+          <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 md:flex" aria-label="Основные разделы">
+            {navLinks.map((link) => (
+              <Link key={link.href} href={link.href} className="rounded-xl px-3 py-2 text-sm font-semibold text-[var(--muted)] transition hover:bg-[var(--muted-bg)] hover:text-[var(--foreground)]">
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
         <nav className="flex shrink-0 items-center" aria-label="Управление аккаунтом">
           <div className={authSlot}>
             {isAuthenticated && user ? (

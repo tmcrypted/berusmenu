@@ -1,4 +1,4 @@
-import type { AssignmentStatus, ResponseStatus, VacancyStatus } from "@/types/matching";
+import type { AssignmentStatus, ResponseStatus, Vacancy, VacancyStatus } from "@/types/matching";
 
 export function money(amount: number) {
   return new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 }).format(amount);
@@ -16,8 +16,31 @@ export function dateTime(value: string) {
   }).format(new Date(value));
 }
 
+export function dateOnly(value: string) {
+  if (!value) {
+    return "Дата не указана";
+  }
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "short",
+  }).format(new Date(value));
+}
+
 export function shiftWindow(start: string, end: string) {
   return `${dateTime(start)} - ${dateTime(end)}`;
+}
+
+export function vacancyLocation(vacancy: Pick<Vacancy, "pvz_city_snapshot" | "pvz_address_snapshot">) {
+  const city = vacancy.pvz_city_snapshot?.trim();
+  const address = vacancy.pvz_address_snapshot.trim();
+
+  if (!city) {
+    return address;
+  }
+  if (!address || address.toLowerCase().includes(city.toLowerCase())) {
+    return address || city;
+  }
+  return `${city}, ${address}`;
 }
 
 export function vacancyStatusLabel(status: VacancyStatus) {

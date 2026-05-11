@@ -47,7 +47,12 @@ export function normalizeApiUser(raw: unknown): User {
   }
 
   const email = typeof r.email === "string" ? r.email : "";
-  const full_name = typeof r.full_name === "string" ? r.full_name : "";
+  const last_name = typeof r.last_name === "string" ? r.last_name : "";
+  const first_name = typeof r.first_name === "string" ? r.first_name : "";
+  const middle_name =
+    r.middle_name === null || r.middle_name === undefined ? null : String(r.middle_name);
+  const birth_date =
+    r.birth_date === null || r.birth_date === undefined ? null : String(r.birth_date);
   const phone =
     r.phone === null || r.phone === undefined
       ? null
@@ -60,6 +65,14 @@ export function normalizeApiUser(raw: unknown): User {
       : typeof r.avatar_url === "string"
         ? r.avatar_url
         : String(r.avatar_url);
+  const telegram_username =
+    r.telegram_username === null || r.telegram_username === undefined
+      ? null
+      : String(r.telegram_username);
+  const max_username =
+    r.max_username === null || r.max_username === undefined
+      ? null
+      : String(r.max_username);
 
   const ts = (v: unknown) => (typeof v === "string" ? v : "");
 
@@ -75,9 +88,14 @@ export function normalizeApiUser(raw: unknown): User {
     email,
     email_verified_at,
     role: coerceRole(r.role),
-    full_name,
+    last_name,
+    first_name,
+    middle_name,
+    birth_date,
     phone,
     avatar_url,
+    telegram_username,
+    max_username,
     created_at: ts(r.created_at),
     updated_at: ts(r.updated_at),
   };

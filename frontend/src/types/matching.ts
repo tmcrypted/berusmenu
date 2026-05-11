@@ -13,6 +13,7 @@ export type Vacancy = {
   shift_start_at: string;
   shift_end_at: string;
   pvz_name_snapshot: string;
+  pvz_city_snapshot?: string | null;
   pvz_address_snapshot: string;
   pay_amount: number;
   slots_total: number;
@@ -49,6 +50,7 @@ export type Assignment = {
   status: AssignmentStatus;
   accepted_at: string;
   pvz_name_snapshot: string;
+  pvz_city_snapshot?: string | null;
   pvz_address_snapshot: string;
   shift_start_at_snapshot: string;
   shift_end_at_snapshot: string;
