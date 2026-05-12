@@ -17,6 +17,7 @@ type Vacancy struct {
 	ShiftEndAt         time.Time
 	PvzNameSnapshot    string
 	PvzAddressSnapshot string
+	PvzCitySnapshot    string
 	PayAmount          int64
 	SlotsTotal         int32
 	CreatedAt          time.Time
@@ -43,6 +44,7 @@ type Assignment struct {
 	AcceptedAt           time.Time
 	PvzNameSnapshot      string
 	PvzAddressSnapshot   string
+	PvzCitySnapshot      string
 	ShiftStartAtSnapshot time.Time
 	PayAmountSnapshot    int64
 	ShiftEndAtSnapshot   time.Time
@@ -120,6 +122,7 @@ type AssignmentSnapshotInput struct {
 	WorkerID           int64
 	PvzNameSnapshot    string
 	PvzAddressSnapshot string
+	PvzCitySnapshot    string
 	OwnerNameSnapshot  string
 	WorkerNameSnapshot string
 }

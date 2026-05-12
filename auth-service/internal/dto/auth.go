@@ -10,7 +10,6 @@ import (
 type RegisterInput struct {
 	Email    string
 	Password string
-	FullName string
 	Role     commonv1.UserRole
 	Phone    *string
 }
@@ -46,10 +45,15 @@ type BlockUserInput struct {
 }
 
 type UpdateProfileInput struct {
-	UserID    int64
-	FullName  *string
-	Phone     *string
-	AvatarURL *string
+	UserID           int64
+	LastName         *string
+	FirstName        *string
+	MiddleName       *string
+	BirthDate        *string
+	Phone            *string
+	AvatarURL        *string
+	TelegramUsername *string
+	MaxUsername      *string
 }
 
 type ResendVerificationCodeInput struct {

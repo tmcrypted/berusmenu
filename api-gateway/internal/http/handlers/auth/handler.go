@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,6 +29,20 @@ type authPayloadResponse struct {
 	AccessExpiresAt string          `json:"access_expires_at"`
 }
 
+type publicUserResponse struct {
+	ID               int64  `json:"id"`
+	Role             string `json:"role"`
+	LastName         string `json:"last_name"`
+	FirstName        string `json:"first_name"`
+	AvatarURL        string `json:"avatar_url,omitempty"`
+	MiddleName       string `json:"middle_name,omitempty"`
+	BirthDate        string `json:"birth_date,omitempty"`
+	TelegramUsername string `json:"telegram_username,omitempty"`
+	MaxUsername      string `json:"max_username,omitempty"`
+	CreatedAt        string `json:"created_at"`
+	UpdatedAt        string `json:"updated_at"`
+}
+
 func RegisterRoutes(
 	group *gin.RouterGroup,
 	cfg config.Config,
@@ -48,6 +63,7 @@ func RegisterRoutes(
 
 	group.GET("/me", authMiddleware, verifiedMiddleware, handler.GetMe)
 	group.PATCH("/me", authMiddleware, verifiedMiddleware, csrfMiddleware, handler.UpdateMe)
+	group.GET("/users/:id", authMiddleware, verifiedMiddleware, handler.GetPublicUser)
 }
 
 func (h Handler) Register(c *gin.Context) {
@@ -65,7 +81,6 @@ func (h Handler) Register(c *gin.Context) {
 	res, err := h.auth.Register(c.Request.Context(), &authv1.RegisterRequest{
 		Email:    req.Email,
 		Password: req.Password,
-		FullName: req.FullName,
 		Role:     role,
 		Phone:    req.Phone,
 	})
@@ -201,9 +216,14 @@ func (h Handler) UpdateMe(c *gin.Context) {
 	}
 
 	res, err := h.auth.UpdateProfile(c.Request.Context(), &authv1.UpdateProfileRequest{
-		FullName:  req.FullName,
-		Phone:     req.Phone,
-		AvatarUrl: req.AvatarURL,
+		LastName:         req.LastName,
+		FirstName:        req.FirstName,
+		MiddleName:       req.MiddleName,
+		BirthDate:        req.BirthDate,
+		Phone:            req.Phone,
+		AvatarUrl:        req.AvatarURL,
+		TelegramUsername: req.TelegramUsername,
+		MaxUsername:      req.MaxUsername,
 	})
 	if err != nil {
 		response.FromGRPCError(c, err)
@@ -211,6 +231,45 @@ func (h Handler) UpdateMe(c *gin.Context) {
 	}
 
 	writeProto(c, http.StatusOK, res.GetUser())
+}
+
+func (h Handler) GetPublicUser(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		response.Error(c, http.StatusBadRequest, "invalid_argument", "invalid user id")
+		return
+	}
+
+	res, err := h.auth.GetUserByID(c.Request.Context(), &authv1.GetUserByIDRequest{UserId: id})
+	if err != nil {
+		response.FromGRPCError(c, err)
+		return
+	}
+	user := res.GetUser()
+	out := publicUserResponse{
+		ID:        user.GetId(),
+		Role:      user.GetRole().String(),
+		LastName:  user.GetLastName(),
+		FirstName: user.GetFirstName(),
+		CreatedAt: user.GetCreatedAt().AsTime().UTC().Format(time.RFC3339),
+		UpdatedAt: user.GetUpdatedAt().AsTime().UTC().Format(time.RFC3339),
+	}
+	if user.AvatarUrl != nil {
+		out.AvatarURL = user.GetAvatarUrl()
+	}
+	if user.MiddleName != nil {
+		out.MiddleName = user.GetMiddleName()
+	}
+	if user.BirthDate != nil {
+		out.BirthDate = user.GetBirthDate()
+	}
+	if user.TelegramUsername != nil {
+		out.TelegramUsername = user.GetTelegramUsername()
+	}
+	if user.MaxUsername != nil {
+		out.MaxUsername = user.GetMaxUsername()
+	}
+	c.JSON(http.StatusOK, out)
 }
 
 func ParseUserRole(value string) (commonv1.UserRole, error) {

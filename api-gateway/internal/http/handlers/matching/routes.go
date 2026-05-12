@@ -27,14 +27,21 @@ func RegisterRoutes(
 ) {
 	handler := Handler{matching: client}
 
+	group.GET("/public/vacancies", handler.ListVacancies)
+	group.GET("/public/vacancies/:id", handler.GetVacancy)
+
 	authorized := group.Group("", authMiddleware, verifiedMiddleware)
 	authorized.POST("/vacancies", csrfMiddleware, handler.CreateVacancy)
 	authorized.GET("/vacancies", handler.ListVacancies)
 	authorized.GET("/vacancies/:id", handler.GetVacancy)
 	authorized.POST("/vacancies/:id/responses", csrfMiddleware, handler.CreateResponse)
 	authorized.GET("/vacancies/:id/responses", handler.ListResponsesForVacancy)
+	authorized.GET("/vacancies/:id/assignment", handler.GetAssignmentForVacancy)
+	authorized.GET("/responses/me", handler.ListMyResponses)
 	authorized.POST("/responses/:id/withdraw", csrfMiddleware, handler.WithdrawResponse)
 	authorized.POST("/responses/:id/accept", csrfMiddleware, handler.AcceptResponse)
+	authorized.GET("/assignments/me", handler.ListMyAssignments)
+	authorized.GET("/assignments/:id", handler.GetAssignment)
 	authorized.POST("/assignments/:id/cancel", csrfMiddleware, handler.CancelAssignment)
 	authorized.POST("/assignments/:id/complete", csrfMiddleware, handler.CompleteAssignment)
 	authorized.POST("/assignments/:id/reviews", csrfMiddleware, handler.CreateReview)
@@ -177,6 +184,23 @@ func (h Handler) ListResponsesForVacancy(c *gin.Context) {
 	response.Proto(c, http.StatusOK, res)
 }
 
+func (h Handler) ListMyResponses(c *gin.Context) {
+	pageSize, ok := pageSize(c)
+	if !ok {
+		return
+	}
+	req := &matchingv1.ListMyResponsesRequest{PageSize: pageSize}
+	if token := c.Query("page_token"); token != "" {
+		req.PageToken = &token
+	}
+	res, err := h.matching.ListMyResponses(c.Request.Context(), req)
+	if err != nil {
+		response.FromGRPCError(c, err)
+		return
+	}
+	response.Proto(c, http.StatusOK, res)
+}
+
 func (h Handler) WithdrawResponse(c *gin.Context) {
 	id, ok := pathID(c, "id")
 	if !ok {
@@ -213,6 +237,49 @@ func (h Handler) ModerationAcceptResponse(c *gin.Context) {
 		return
 	}
 	res, err := h.matching.AcceptResponse(c.Request.Context(), &matchingv1.AcceptResponseRequest{ResponseId: id, AdminReason: &req.Reason})
+	if err != nil {
+		response.FromGRPCError(c, err)
+		return
+	}
+	response.Proto(c, http.StatusOK, res.GetAssignment())
+}
+
+func (h Handler) GetAssignment(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	res, err := h.matching.GetAssignment(c.Request.Context(), &matchingv1.GetAssignmentRequest{Id: id})
+	if err != nil {
+		response.FromGRPCError(c, err)
+		return
+	}
+	response.Proto(c, http.StatusOK, res.GetAssignment())
+}
+
+func (h Handler) ListMyAssignments(c *gin.Context) {
+	pageSize, ok := pageSize(c)
+	if !ok {
+		return
+	}
+	req := &matchingv1.ListMyAssignmentsRequest{PageSize: pageSize}
+	if token := c.Query("page_token"); token != "" {
+		req.PageToken = &token
+	}
+	res, err := h.matching.ListMyAssignments(c.Request.Context(), req)
+	if err != nil {
+		response.FromGRPCError(c, err)
+		return
+	}
+	response.Proto(c, http.StatusOK, res)
+}
+
+func (h Handler) GetAssignmentForVacancy(c *gin.Context) {
+	id, ok := pathID(c, "id")
+	if !ok {
+		return
+	}
+	res, err := h.matching.GetAssignmentForVacancy(c.Request.Context(), &matchingv1.GetAssignmentForVacancyRequest{VacancyId: id})
 	if err != nil {
 		response.FromGRPCError(c, err)
 		return

@@ -28,7 +28,7 @@ type UserRepository interface {
 	RotateRefreshSession(ctx context.Context, oldRefreshToken string, newRefreshToken string, newExpiresAt time.Time) (store.User, error)
 	RevokeRefreshSession(ctx context.Context, refreshToken string) error
 	MarkEmailVerified(ctx context.Context, userID int64) (store.User, error)
-	UpdateProfile(ctx context.Context, userID int64, fullName *string, phone *string, avatarURL *string) (store.User, error)
+	UpdateProfile(ctx context.Context, userID int64, lastName *string, firstName *string, middleName *string, birthDate *time.Time, phone *string, avatarURL *string, telegramUsername *string, maxUsername *string) (store.User, error)
 	BlockUser(ctx context.Context, userID int64, blockedUntil time.Time) (store.User, error)
 }
 
@@ -94,7 +94,6 @@ func (s *Service) Register(ctx context.Context, input dto.RegisterInput) (dto.Au
 		Email:        email,
 		PasswordHash: string(passwordHash),
 		Role:         role,
-		FullName:     strings.TrimSpace(input.FullName),
 		Phone:        input.Phone,
 	}, refreshToken, time.Now().Add(s.cfg.RefreshTTL))
 	if err != nil {
@@ -242,11 +241,42 @@ func (s *Service) BlockUser(ctx context.Context, input dto.BlockUserInput) (stor
 }
 
 func (s *Service) UpdateProfile(ctx context.Context, input dto.UpdateProfileInput) (store.User, error) {
-	user, err := s.users.UpdateProfile(ctx, input.UserID, input.FullName, input.Phone, input.AvatarURL)
+	lastName := trimPtr(input.LastName)
+	firstName := trimPtr(input.FirstName)
+	middleName := trimPtr(input.MiddleName)
+	telegramUsername := normalizeUsername(input.TelegramUsername)
+	maxUsername := normalizeUsername(input.MaxUsername)
+	var birthDate *time.Time
+	if input.BirthDate != nil {
+		parsed, err := time.Parse("2006-01-02", strings.TrimSpace(*input.BirthDate))
+		if err != nil || parsed.After(time.Now()) {
+			return store.User{}, serviceError(ErrInvalidArgument, "birth_date must be YYYY-MM-DD in the past")
+		}
+		birthDate = &parsed
+	}
+
+	user, err := s.users.UpdateProfile(ctx, input.UserID, lastName, firstName, middleName, birthDate, input.Phone, input.AvatarURL, telegramUsername, maxUsername)
 	if err != nil {
 		return store.User{}, notFoundOrInternal(err, "user not found", "failed to update profile")
 	}
 	return user, nil
+}
+
+func trimPtr(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*value)
+	return &trimmed
+}
+
+func normalizeUsername(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*value)
+	trimmed = strings.TrimPrefix(trimmed, "@")
+	return &trimmed
 }
 
 func (s *Service) ResendVerificationCode(ctx context.Context, input dto.ResendVerificationCodeInput) (dto.VerificationCodeOutput, error) {

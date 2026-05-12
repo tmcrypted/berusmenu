@@ -54,10 +54,7 @@ func (s *Server) CreateVacancy(ctx context.Context, req *matchingv1.CreateVacanc
 }
 
 func (s *Server) GetVacancy(ctx context.Context, req *matchingv1.GetVacancyRequest) (*matchingv1.GetVacancyResponse, error) {
-	actor, err := actorFromMetadata(ctx)
-	if err != nil {
-		return nil, err
-	}
+	actor := optionalActorFromMetadata(ctx)
 	vacancy, err := s.matching.GetVacancy(ctx, dto.IDInput{Actor: actor, ID: req.GetId()})
 	if err != nil {
 		return nil, toGRPCError(err)
@@ -66,10 +63,7 @@ func (s *Server) GetVacancy(ctx context.Context, req *matchingv1.GetVacancyReque
 }
 
 func (s *Server) ListVacancies(ctx context.Context, req *matchingv1.ListVacanciesRequest) (*matchingv1.ListVacanciesResponse, error) {
-	actor, err := actorFromMetadata(ctx)
-	if err != nil {
-		return nil, err
-	}
+	actor := optionalActorFromMetadata(ctx)
 	var from, to *timeWrapper
 	if req.ShiftStartFrom != nil {
 		from = &timeWrapper{req.ShiftStartFrom.AsTime()}
@@ -140,6 +134,18 @@ func (s *Server) ListResponsesForVacancy(ctx context.Context, req *matchingv1.Li
 	return &matchingv1.ListResponsesForVacancyResponse{Items: toProtoResponses(items), NextPageToken: next}, nil
 }
 
+func (s *Server) ListMyResponses(ctx context.Context, req *matchingv1.ListMyResponsesRequest) (*matchingv1.ListMyResponsesResponse, error) {
+	actor, err := actorFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	items, next, err := s.matching.ListMyResponses(ctx, dto.ListMyResponsesInput{Actor: actor, PageSize: req.GetPageSize(), PageToken: req.PageToken})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &matchingv1.ListMyResponsesResponse{Items: toProtoResponses(items), NextPageToken: next}, nil
+}
+
 func (s *Server) AcceptResponse(ctx context.Context, req *matchingv1.AcceptResponseRequest) (*matchingv1.AcceptResponseResponse, error) {
 	actor, err := actorFromMetadata(ctx)
 	if err != nil {
@@ -154,6 +160,42 @@ func (s *Server) AcceptResponse(ctx context.Context, req *matchingv1.AcceptRespo
 		return nil, toGRPCError(err)
 	}
 	return &matchingv1.AcceptResponseResponse{Assignment: toProtoAssignment(assignment)}, nil
+}
+
+func (s *Server) GetAssignment(ctx context.Context, req *matchingv1.GetAssignmentRequest) (*matchingv1.GetAssignmentResponse, error) {
+	actor, err := actorFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	assignment, err := s.matching.GetAssignment(ctx, dto.IDInput{Actor: actor, ID: req.GetId()})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &matchingv1.GetAssignmentResponse{Assignment: toProtoAssignment(assignment)}, nil
+}
+
+func (s *Server) ListMyAssignments(ctx context.Context, req *matchingv1.ListMyAssignmentsRequest) (*matchingv1.ListMyAssignmentsResponse, error) {
+	actor, err := actorFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	items, next, err := s.matching.ListMyAssignments(ctx, dto.ListMyAssignmentsInput{Actor: actor, PageSize: req.GetPageSize(), PageToken: req.PageToken})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &matchingv1.ListMyAssignmentsResponse{Items: toProtoAssignments(items), NextPageToken: next}, nil
+}
+
+func (s *Server) GetAssignmentForVacancy(ctx context.Context, req *matchingv1.GetAssignmentForVacancyRequest) (*matchingv1.GetAssignmentForVacancyResponse, error) {
+	actor, err := actorFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	assignment, err := s.matching.GetAssignmentForVacancy(ctx, dto.GetAssignmentForVacancyInput{Actor: actor, VacancyID: req.GetVacancyId()})
+	if err != nil {
+		return nil, toGRPCError(err)
+	}
+	return &matchingv1.GetAssignmentForVacancyResponse{Assignment: toProtoAssignment(assignment)}, nil
 }
 
 func (s *Server) CancelAssignment(ctx context.Context, req *matchingv1.CancelAssignmentRequest) (*matchingv1.CancelAssignmentResponse, error) {
@@ -330,6 +372,14 @@ func actorFromMetadata(ctx context.Context) (dto.Actor, error) {
 		email = values[0]
 	}
 	return dto.Actor{UserID: userID, Role: role, Email: email}, nil
+}
+
+func optionalActorFromMetadata(ctx context.Context) dto.Actor {
+	actor, err := actorFromMetadata(ctx)
+	if err == nil {
+		return actor
+	}
+	return dto.Actor{Role: commonv1.UserRole_USER_ROLE_WORKER}
 }
 
 func metadataInt64(md metadata.MD, key string) (int64, error) {

@@ -35,8 +35,8 @@ func NewEventID() (string, error) {
 
 func (s *Store) CreateVacancy(ctx context.Context, input Vacancy) (Vacancy, error) {
 	sql, args, err := psql.Insert("matching.vacancies").
-		Columns("owner_id", "pvz_id", "status", "title", "description", "shift_start_at", "shift_end_at", "pvz_name_snapshot", "pvz_address_snapshot", "pay_amount", "slots_total").
-		Values(input.OwnerID, input.PvzID, vacancyStatusToDB(commonv1.VacancyStatus_VACANCY_STATUS_PUBLISHED), input.Title, input.Description, input.ShiftStartAt, input.ShiftEndAt, input.PvzNameSnapshot, input.PvzAddressSnapshot, input.PayAmount, input.SlotsTotal).
+		Columns("owner_id", "pvz_id", "status", "title", "description", "shift_start_at", "shift_end_at", "pvz_name_snapshot", "pvz_address_snapshot", "pvz_city_snapshot", "pay_amount", "slots_total").
+		Values(input.OwnerID, input.PvzID, vacancyStatusToDB(commonv1.VacancyStatus_VACANCY_STATUS_PUBLISHED), input.Title, input.Description, input.ShiftStartAt, input.ShiftEndAt, input.PvzNameSnapshot, input.PvzAddressSnapshot, input.PvzCitySnapshot, input.PayAmount, input.SlotsTotal).
 		Suffix("RETURNING " + vacancyColumns()).
 		ToSql()
 	if err != nil {
@@ -146,6 +146,15 @@ func (s *Store) ListResponsesForVacancy(ctx context.Context, vacancyID int64, li
 	return list(ctx, s.pool, sql, scanResponse, args...)
 }
 
+func (s *Store) ListResponsesByWorker(ctx context.Context, workerID int64, limit uint64, offset uint64) ([]Response, error) {
+	sql, args, err := psql.Select(responseColumns()).From("matching.responses").
+		Where(sq.Eq{"worker_id": workerID}).OrderBy("created_at DESC", "id DESC").Limit(limit).Offset(offset).ToSql()
+	if err != nil {
+		return nil, err
+	}
+	return list(ctx, s.pool, sql, scanResponse, args...)
+}
+
 func (s *Store) WithdrawResponse(ctx context.Context, responseID int64) (Response, error) {
 	sql, args, err := psql.Update("matching.responses").
 		Set("status", responseStatusToDB(commonv1.ResponseStatus_RESPONSE_STATUS_WITHDRAWN)).
@@ -216,8 +225,8 @@ func (s *Store) AcceptResponse(ctx context.Context, input AssignmentSnapshotInpu
 	}
 
 	sql, args, err := psql.Insert("matching.assignments").
-		Columns("vacancy_id", "response_id", "owner_id", "worker_id", "status", "pvz_name_snapshot", "pvz_address_snapshot", "shift_start_at_snapshot", "pay_amount_snapshot", "shift_end_at_snapshot", "owner_name_snapshot", "worker_name_snapshot").
-		Values(input.Vacancy.ID, accepted.ID, input.Vacancy.OwnerID, input.WorkerID, assignmentStatusToDB(commonv1.AssignmentStatus_ASSIGNMENT_STATUS_ACTIVE), input.PvzNameSnapshot, input.PvzAddressSnapshot, input.Vacancy.ShiftStartAt, input.Vacancy.PayAmount, input.Vacancy.ShiftEndAt, input.OwnerNameSnapshot, input.WorkerNameSnapshot).
+		Columns("vacancy_id", "response_id", "owner_id", "worker_id", "status", "pvz_name_snapshot", "pvz_address_snapshot", "pvz_city_snapshot", "shift_start_at_snapshot", "pay_amount_snapshot", "shift_end_at_snapshot", "owner_name_snapshot", "worker_name_snapshot").
+		Values(input.Vacancy.ID, accepted.ID, input.Vacancy.OwnerID, input.WorkerID, assignmentStatusToDB(commonv1.AssignmentStatus_ASSIGNMENT_STATUS_ACTIVE), input.PvzNameSnapshot, input.PvzAddressSnapshot, input.PvzCitySnapshot, input.Vacancy.ShiftStartAt, input.Vacancy.PayAmount, input.Vacancy.ShiftEndAt, input.OwnerNameSnapshot, input.WorkerNameSnapshot).
 		Suffix("RETURNING " + assignmentColumns()).
 		ToSql()
 	if err != nil {
@@ -240,6 +249,27 @@ func (s *Store) AcceptResponse(ctx context.Context, input AssignmentSnapshotInpu
 
 func (s *Store) GetAssignment(ctx context.Context, id int64) (Assignment, error) {
 	sql, args, err := psql.Select(assignmentColumns()).From("matching.assignments").Where(sq.Eq{"id": id}).ToSql()
+	if err != nil {
+		return Assignment{}, err
+	}
+	return scanAssignment(s.pool.QueryRow(ctx, sql, args...))
+}
+
+func (s *Store) ListAssignmentsForUser(ctx context.Context, userID int64, limit uint64, offset uint64) ([]Assignment, error) {
+	sql, args, err := psql.Select(assignmentColumns()).From("matching.assignments").
+		Where(sq.Or{sq.Eq{"owner_id": userID}, sq.Eq{"worker_id": userID}}).
+		OrderBy("created_at DESC", "id DESC").
+		Limit(limit).
+		Offset(offset).
+		ToSql()
+	if err != nil {
+		return nil, err
+	}
+	return list(ctx, s.pool, sql, scanAssignment, args...)
+}
+
+func (s *Store) AssignmentForVacancy(ctx context.Context, vacancyID int64) (Assignment, error) {
+	sql, args, err := psql.Select(assignmentColumns()).From("matching.assignments").Where(sq.Eq{"vacancy_id": vacancyID}).ToSql()
 	if err != nil {
 		return Assignment{}, err
 	}
@@ -588,7 +618,7 @@ func isUniqueViolation(err error) bool {
 func scanVacancy(row pgx.Row) (Vacancy, error) {
 	var item Vacancy
 	var status string
-	err := row.Scan(&item.ID, &item.OwnerID, &item.PvzID, &status, &item.Title, &item.Description, &item.ShiftStartAt, &item.ShiftEndAt, &item.PvzNameSnapshot, &item.PvzAddressSnapshot, &item.PayAmount, &item.SlotsTotal, &item.CreatedAt, &item.UpdatedAt)
+	err := row.Scan(&item.ID, &item.OwnerID, &item.PvzID, &status, &item.Title, &item.Description, &item.ShiftStartAt, &item.ShiftEndAt, &item.PvzNameSnapshot, &item.PvzAddressSnapshot, &item.PvzCitySnapshot, &item.PayAmount, &item.SlotsTotal, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		return Vacancy{}, rowErr(err)
 	}
@@ -610,7 +640,7 @@ func scanResponse(row pgx.Row) (Response, error) {
 func scanAssignment(row pgx.Row) (Assignment, error) {
 	var item Assignment
 	var status string
-	err := row.Scan(&item.ID, &item.VacancyID, &item.ResponseID, &item.OwnerID, &item.WorkerID, &status, &item.AcceptedAt, &item.PvzNameSnapshot, &item.PvzAddressSnapshot, &item.ShiftStartAtSnapshot, &item.PayAmountSnapshot, &item.ShiftEndAtSnapshot, &item.OwnerNameSnapshot, &item.WorkerNameSnapshot, &item.CompletedAt, &item.CancelledAt, &item.CancelledByUserID, &item.CancelReason, &item.UpdatedAt, &item.CreatedAt)
+	err := row.Scan(&item.ID, &item.VacancyID, &item.ResponseID, &item.OwnerID, &item.WorkerID, &status, &item.AcceptedAt, &item.PvzNameSnapshot, &item.PvzAddressSnapshot, &item.PvzCitySnapshot, &item.ShiftStartAtSnapshot, &item.PayAmountSnapshot, &item.ShiftEndAtSnapshot, &item.OwnerNameSnapshot, &item.WorkerNameSnapshot, &item.CompletedAt, &item.CancelledAt, &item.CancelledByUserID, &item.CancelReason, &item.UpdatedAt, &item.CreatedAt)
 	if err != nil {
 		return Assignment{}, rowErr(err)
 	}
@@ -646,7 +676,7 @@ func rowErr(err error) error {
 }
 
 func vacancyColumns() string {
-	return "id, owner_id, pvz_id, status, title, description, shift_start_at, shift_end_at, pvz_name_snapshot, pvz_address_snapshot, pay_amount, slots_total, created_at, updated_at"
+	return "id, owner_id, pvz_id, status, title, description, shift_start_at, shift_end_at, pvz_name_snapshot, pvz_address_snapshot, pvz_city_snapshot, pay_amount, slots_total, created_at, updated_at"
 }
 
 func responseColumns() string {
@@ -654,7 +684,7 @@ func responseColumns() string {
 }
 
 func assignmentColumns() string {
-	return "id, vacancy_id, response_id, owner_id, worker_id, status, accepted_at, pvz_name_snapshot, pvz_address_snapshot, shift_start_at_snapshot, pay_amount_snapshot, shift_end_at_snapshot, owner_name_snapshot, worker_name_snapshot, completed_at, cancelled_at, cancelled_by_user_id, cancel_reason, updated_at, created_at"
+	return "id, vacancy_id, response_id, owner_id, worker_id, status, accepted_at, pvz_name_snapshot, pvz_address_snapshot, pvz_city_snapshot, shift_start_at_snapshot, pay_amount_snapshot, shift_end_at_snapshot, owner_name_snapshot, worker_name_snapshot, completed_at, cancelled_at, cancelled_by_user_id, cancel_reason, updated_at, created_at"
 }
 
 func reviewColumns() string {

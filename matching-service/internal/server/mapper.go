@@ -18,6 +18,7 @@ func toProtoVacancy(item store.Vacancy) *matchingv1.Vacancy {
 		ShiftStartAt:       timestamppb.New(item.ShiftStartAt),
 		ShiftEndAt:         timestamppb.New(item.ShiftEndAt),
 		PvzAddressSnapshot: item.PvzAddressSnapshot,
+		PvzCitySnapshot:    item.PvzCitySnapshot,
 		PayAmount:          item.PayAmount,
 		SlotsTotal:         item.SlotsTotal,
 		CreatedAt:          timestamppb.New(item.CreatedAt),
@@ -64,6 +65,7 @@ func toProtoAssignment(item store.Assignment) *matchingv1.Assignment {
 		AcceptedAt:           timestamppb.New(item.AcceptedAt),
 		PvzNameSnapshot:      item.PvzNameSnapshot,
 		PvzAddressSnapshot:   item.PvzAddressSnapshot,
+		PvzCitySnapshot:      item.PvzCitySnapshot,
 		ShiftStartAtSnapshot: timestamppb.New(item.ShiftStartAtSnapshot),
 		PayAmountSnapshot:    item.PayAmountSnapshot,
 		ShiftEndAtSnapshot:   timestamppb.New(item.ShiftEndAtSnapshot),
@@ -79,6 +81,14 @@ func toProtoAssignment(item store.Assignment) *matchingv1.Assignment {
 	}
 	if item.CancelledAt != nil {
 		out.CancelledAt = timestamppb.New(*item.CancelledAt)
+	}
+	return out
+}
+
+func toProtoAssignments(items []store.Assignment) []*matchingv1.Assignment {
+	out := make([]*matchingv1.Assignment, 0, len(items))
+	for _, item := range items {
+		out = append(out, toProtoAssignment(item))
 	}
 	return out
 }

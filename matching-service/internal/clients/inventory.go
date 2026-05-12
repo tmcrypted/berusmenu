@@ -26,5 +26,6 @@ func (c *InventoryClient) CheckPvzForVacancy(ctx context.Context, pvzID int64) (
 		OwnerID:     pvz.GetOwnerId(),
 		CompanyName: pvz.GetCompanyName(),
 		Address:     pvz.GetAddress(),
+		City:        pvz.GetCity(),
 	}, nil
 }

@@ -9,7 +9,7 @@ Frontend workspace for the Berusmenu MVP.
 - post-verify profile completion for `worker` and `owner`
 - owner PVZ flow through `inventory-service`
 - moderator PVZ moderation panel
-- worker entry points for later domain flows
+- matching vacancy feed, responses, assignments, reviews, replies, and matching moderation entry points
 - responsive web UI for mobile, tablet, and desktop
 
 ## Current stack
@@ -43,7 +43,8 @@ Frontend workspace for the Berusmenu MVP.
 - moderator accounts are assigned outside the UI and can process pending PVZ requests, including timed owner spam block with PVZ cleanup
 - both light and dark themes are first-class and switched manually
 - new UI must remain usable across phones, tablets, and desktop screens
-- public home can use mocked vacancies until matching endpoints are ready
+- matching read-heavy pages use SSR with cookie forwarding and `cache: "no-store"`; mutation controls remain client islands
+- communication UI is a read-only placeholder until `communication-service` is implemented
 - verification screen must keep logout, resend code, and verify code input
 - withdraw response must keep strong confirmation UI when response flows are added
 - replies under review stay collapsed by default with a "show replies" affordance

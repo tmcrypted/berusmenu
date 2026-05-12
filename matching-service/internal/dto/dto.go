@@ -18,10 +18,10 @@ type Page struct {
 }
 
 type UserSnapshot struct {
-	UserID   int64
-	Email    string
-	FullName string
-	Role     commonv1.UserRole
+	UserID      int64
+	Email       string
+	DisplayName string
+	Role        commonv1.UserRole
 }
 
 type PvzSnapshot struct {
@@ -29,6 +29,7 @@ type PvzSnapshot struct {
 	OwnerID     int64
 	CompanyName string
 	Address     string
+	City        string
 }
 
 type CreateVacancyInput struct {
@@ -75,10 +76,27 @@ type ListResponsesInput struct {
 	PageToken *string
 }
 
+type ListMyResponsesInput struct {
+	Actor     Actor
+	PageSize  int32
+	PageToken *string
+}
+
 type AcceptResponseInput struct {
 	Actor       Actor
 	ResponseID  int64
 	AdminReason *string
+}
+
+type ListMyAssignmentsInput struct {
+	Actor     Actor
+	PageSize  int32
+	PageToken *string
+}
+
+type GetAssignmentForVacancyInput struct {
+	Actor     Actor
+	VacancyID int64
 }
 
 type CancelAssignmentInput struct {

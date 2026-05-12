@@ -112,7 +112,6 @@ Fields:
 
 - `email`: required, email.
 - `password`: required, minimum 8 chars.
-- `full_name`: optional. Frontend MVP collects it after email verification during profile completion.
 - `role`: optional, one of `worker`, `owner`, `moderator`; defaults to `worker`.
 - `phone`: optional. Frontend MVP collects it after email verification during profile completion.
 
@@ -124,7 +123,8 @@ Success `201`:
     "id": "7",
     "email": "worker@example.com",
     "role": "USER_ROLE_WORKER",
-    "full_name": "Worker User",
+    "last_name": "",
+    "first_name": "",
     "created_at": "2026-05-06T13:00:00Z",
     "updated_at": "2026-05-06T13:00:00Z"
   },
@@ -184,7 +184,8 @@ Success `200`:
   "id": "7",
   "email": "worker@example.com",
   "role": "USER_ROLE_WORKER",
-  "full_name": "Worker User",
+  "last_name": "",
+  "first_name": "",
   "created_at": "2026-05-06T13:00:00Z",
   "updated_at": "2026-05-06T13:00:00Z"
 }
@@ -258,7 +259,8 @@ Success `200`:
     "email": "worker@example.com",
     "email_verified_at": "2026-05-06T13:02:00Z",
     "role": "USER_ROLE_WORKER",
-    "full_name": "Worker User",
+    "last_name": "",
+    "first_name": "",
     "created_at": "2026-05-06T13:00:00Z",
     "updated_at": "2026-05-06T13:02:00Z"
   }
@@ -287,7 +289,12 @@ Success `200`:
   "email": "worker@example.com",
   "email_verified_at": "2026-05-06T13:02:00Z",
   "role": "USER_ROLE_WORKER",
-  "full_name": "Worker User",
+  "last_name": "Ivanov",
+  "first_name": "Ivan",
+  "middle_name": "Ivanovich",
+  "birth_date": "1995-04-10",
+  "telegram_username": "ivan_worker",
+  "max_username": "ivan_worker",
   "created_at": "2026-05-06T13:00:00Z",
   "updated_at": "2026-05-06T13:02:00Z"
 }
@@ -305,17 +312,51 @@ Request:
 
 ```json
 {
-  "full_name": "New Name",
+  "last_name": "Ivanov",
+  "first_name": "Ivan",
+  "middle_name": "Ivanovich",
+  "birth_date": "1995-04-10",
   "phone": "+79990001122",
-  "avatar_url": "https://example.com/avatar.png"
+  "avatar_url": "https://example.com/avatar.png",
+  "telegram_username": "ivan_worker",
+  "max_username": "ivan_worker"
 }
 ```
 
 All fields are optional. Omitted fields are unchanged.
+Messenger usernames are optional and stored without a leading `@`.
 
 Frontend note: for the current MVP, `PATCH /v1/me` is the primary endpoint for post-verify profile completion.
 
 Success `200`: same shape as `GET /v1/me`.
+
+Possible errors: `400`, `401`, `403`, `404`.
+
+### `GET /v1/users/{id}`
+
+Returns public user profile fields for profile pages, response cards and review context.
+
+Auth: access cookie required. Requires verified email.
+
+Success `200`:
+
+```json
+{
+  "id": "7",
+  "role": "USER_ROLE_WORKER",
+  "last_name": "Ivanov",
+  "first_name": "Ivan",
+  "middle_name": "Ivanovich",
+  "birth_date": "1995-04-10",
+  "avatar_url": "https://example.com/avatar.png",
+  "telegram_username": "ivan_worker",
+  "max_username": "ivan_worker",
+  "created_at": "2026-05-06T13:00:00Z",
+  "updated_at": "2026-05-06T13:02:00Z"
+}
+```
+
+Private fields such as `email` and `phone` are not returned by this endpoint.
 
 Possible errors: `400`, `401`, `403`, `404`.
 
@@ -522,6 +563,11 @@ Vacancy shift windows use ISO 8601 timestamps:
 }
 ```
 
+Vacancy responses include PVZ snapshots captured at vacancy creation time:
+`pvz_name_snapshot`, `pvz_city_snapshot`, and `pvz_address_snapshot`.
+
+`GET /v1/public/vacancies` and `GET /v1/public/vacancies/:id` are guest-readable and only expose published vacancies.
+
 `GET /v1/vacancies` is role-aware:
 
 - worker sees published vacancies;
@@ -544,8 +590,12 @@ Implemented public matching routes:
 - `GET /v1/vacancies/:id`
 - `POST /v1/vacancies/:id/responses`
 - `GET /v1/vacancies/:id/responses`
+- `GET /v1/vacancies/:id/assignment`
+- `GET /v1/responses/me`
 - `POST /v1/responses/:id/withdraw`
 - `POST /v1/responses/:id/accept`
+- `GET /v1/assignments/me`
+- `GET /v1/assignments/:id`
 - `POST /v1/assignments/:id/cancel`
 - `POST /v1/assignments/:id/complete`
 - `POST /v1/assignments/:id/reviews`

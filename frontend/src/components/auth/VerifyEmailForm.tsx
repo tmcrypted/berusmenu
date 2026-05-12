@@ -139,7 +139,7 @@ export function VerifyEmailForm() {
             <Field
               label="Код подтверждения"
               htmlFor="verification-code"
-              hint="В local/dev код печатается в логах auth-service или notification-service."
+              hint="Введите код из письма."
               error={errors.code?.message}
             >
               <Input

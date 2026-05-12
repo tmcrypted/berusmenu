@@ -7,9 +7,28 @@ export type User = {
   email: string;
   email_verified_at?: string | null;
   role: UserRole;
-  full_name: string;
+  last_name: string;
+  first_name: string;
+  middle_name?: string | null;
+  birth_date?: string | null;
   phone?: string | null;
   avatar_url?: string | null;
+  telegram_username?: string | null;
+  max_username?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PublicUser = {
+  id: number;
+  role: UserRole;
+  last_name: string;
+  first_name: string;
+  middle_name?: string | null;
+  birth_date?: string | null;
+  avatar_url?: string | null;
+  telegram_username?: string | null;
+  max_username?: string | null;
   created_at: string;
   updated_at: string;
 };

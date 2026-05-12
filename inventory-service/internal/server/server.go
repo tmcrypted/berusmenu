@@ -121,6 +121,7 @@ func (s *Server) CheckPvzForVacancy(ctx context.Context, req *inventoryv1.CheckP
 			OwnerId:     pvz.OwnerID,
 			CompanyName: pvz.CompanyName,
 			Address:     pvz.Address,
+			City:        pvz.City,
 		},
 	}, nil
 }

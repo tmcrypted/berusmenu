@@ -182,7 +182,7 @@ func (fakeInventory) CheckPvzForVacancy(ctx context.Context, pvzID int64) (dto.P
 type fakeAuth struct{}
 
 func (fakeAuth) GetUserByID(ctx context.Context, userID int64) (dto.UserSnapshot, error) {
-	return dto.UserSnapshot{UserID: userID, Email: "user@example.com", FullName: "User", Role: commonv1.UserRole_USER_ROLE_OWNER}, nil
+	return dto.UserSnapshot{UserID: userID, Email: "user@example.com", DisplayName: "User", Role: commonv1.UserRole_USER_ROLE_OWNER}, nil
 }
 
 type fakeEvents struct{}
@@ -235,6 +235,13 @@ func (r *fakeRepo) ListResponsesForVacancy(ctx context.Context, vacancyID int64,
 	return nil, nil
 }
 
+func (r *fakeRepo) ListResponsesByWorker(ctx context.Context, workerID int64, limit uint64, offset uint64) ([]store.Response, error) {
+	if r.response.ID == 0 {
+		return nil, nil
+	}
+	return []store.Response{r.response}, nil
+}
+
 func (r *fakeRepo) WithdrawResponse(ctx context.Context, responseID int64) (store.Response, error) {
 	return r.response, nil
 }
@@ -248,6 +255,20 @@ func (r *fakeRepo) AcceptResponse(ctx context.Context, input store.AssignmentSna
 }
 
 func (r *fakeRepo) GetAssignment(ctx context.Context, id int64) (store.Assignment, error) {
+	if r.assignment.ID == 0 {
+		return store.Assignment{}, store.ErrNotFound
+	}
+	return r.assignment, nil
+}
+
+func (r *fakeRepo) ListAssignmentsForUser(ctx context.Context, userID int64, limit uint64, offset uint64) ([]store.Assignment, error) {
+	if r.assignment.ID == 0 {
+		return nil, nil
+	}
+	return []store.Assignment{r.assignment}, nil
+}
+
+func (r *fakeRepo) AssignmentForVacancy(ctx context.Context, vacancyID int64) (store.Assignment, error) {
 	if r.assignment.ID == 0 {
 		return store.Assignment{}, store.ErrNotFound
 	}

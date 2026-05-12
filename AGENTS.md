@@ -123,6 +123,13 @@ Verification policy:
 - Prefer ASCII in documentation files to avoid terminal/codepage issues.
 - When API, contracts, runtime, env, Docker, service boundaries or developer workflow change, update the relevant `.md` files.
 
+## Local Runtime Rules
+
+- Do not start local app, Docker, dev, preview or runtime servers unless the user explicitly asks for it.
+- The user owns all local and Docker application runs.
+- Codex may run tests and static checks when needed.
+- When a runtime command would be useful, provide it as an optional command for the user instead of running it.
+
 When product decisions change, update:
 
 - root `README.md`;

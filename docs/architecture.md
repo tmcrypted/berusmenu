@@ -40,7 +40,8 @@ flowchart LR
 - Frontend never stores access/refresh tokens in JavaScript.
 - First-paint frontend auth bootstrap uses `GET /v1/auth/session`.
 - Registration is minimal: `email + password + role`.
-- Profile completion happens after email verification.
+- Profile completion happens after email verification and may include optional Telegram and Max usernames.
+- Published vacancies can be listed publicly for guest discovery; responses remain authenticated.
 - Gateway enforces CSRF for authenticated unsafe methods.
 - Gateway forwards identity to backend services through gRPC metadata.
 - Backend services talk over gRPC.

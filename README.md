@@ -47,7 +47,7 @@ Implemented:
 - `inventory-service`: create/read/list/update PVZ, moderation queue, approve/reject/block PVZ, owner-only access, moderator-only moderation, temporary matching dependency for active vacancy checks.
 - `matching-service`: vacancy create/list/get, response create/withdraw/list/accept, assignment cancel/complete, reviews/replies, rating aggregates, active vacancy and chat writability checks, response notification outbox.
 - `api-gateway`: auth/profile routes, inventory routes, moderation routes, cookie/CSRF middleware, gRPC clients.
-- `frontend`: auth flow, email verification, profile completion, owner PVZ flow, moderator PVZ moderation panel, timed owner spam block action.
+- `frontend`: auth flow, email verification, profile completion with optional messenger usernames, guest vacancy feed, owner PVZ flow, moderator PVZ moderation panel, timed owner spam block action, SSR matching vacancy/response/assignment/review screens, and read-only chat placeholders.
 
 Not implemented as runnable services yet:
 
@@ -68,7 +68,7 @@ They already have protobuf outlines, architecture rules and Docker future-profil
 9. Owner selects worker and assignment is created.
 10. After `completed` or `cancelled`, both sides can create review and reply.
 
-The current implemented slice covers backend and frontend up to PVZ moderation. Vacancy, response, assignment, chat and review flows are next.
+The current implemented slice covers backend matching flows and frontend screens for vacancies, responses, assignments, reviews and read-only chat placeholders. The real communication service and realtime chat UI are next.
 
 ## Architecture Rules
 

@@ -29,18 +29,23 @@ type Store struct {
 var psql = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
 type User struct {
-	ID              int64
-	Email           string
-	EmailVerifiedAt *time.Time
-	PasswordHash    string
-	Role            commonv1.UserRole
-	FullName        string
-	Phone           *string
-	AvatarURL       *string
-	Status          string
-	BlockedUntil    *time.Time
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID               int64
+	Email            string
+	EmailVerifiedAt  *time.Time
+	PasswordHash     string
+	Role             commonv1.UserRole
+	LastName         string
+	FirstName        string
+	MiddleName       *string
+	BirthDate        *time.Time
+	Phone            *string
+	AvatarURL        *string
+	TelegramUsername *string
+	MaxUsername      *string
+	Status           string
+	BlockedUntil     *time.Time
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 type OutboxEvent struct {
@@ -73,8 +78,8 @@ func (s *Store) CreateUserWithSession(ctx context.Context, user User, refreshTok
 	defer tx.Rollback(ctx)
 
 	sql, args, err := psql.Insert("auth.users").
-		Columns("email", "password_hash", "role", "full_name", "phone").
-		Values(user.Email, user.PasswordHash, roleToDB(user.Role), user.FullName, user.Phone).
+		Columns("email", "password_hash", "role", "last_name", "first_name", "middle_name", "birth_date", "phone").
+		Values(user.Email, user.PasswordHash, roleToDB(user.Role), user.LastName, user.FirstName, user.MiddleName, user.BirthDate, user.Phone).
 		Suffix("RETURNING " + userColumns()).
 		ToSql()
 	if err != nil {
@@ -223,13 +228,22 @@ func (s *Store) MarkEmailVerified(ctx context.Context, userID int64) (User, erro
 	return scanUser(row)
 }
 
-func (s *Store) UpdateProfile(ctx context.Context, userID int64, fullName *string, phone *string, avatarURL *string) (User, error) {
+func (s *Store) UpdateProfile(ctx context.Context, userID int64, lastName *string, firstName *string, middleName *string, birthDate *time.Time, phone *string, avatarURL *string, telegramUsername *string, maxUsername *string) (User, error) {
 	current, err := s.GetUserByID(ctx, userID)
 	if err != nil {
 		return User{}, err
 	}
-	if fullName != nil {
-		current.FullName = *fullName
+	if lastName != nil {
+		current.LastName = *lastName
+	}
+	if firstName != nil {
+		current.FirstName = *firstName
+	}
+	if middleName != nil {
+		current.MiddleName = middleName
+	}
+	if birthDate != nil {
+		current.BirthDate = birthDate
 	}
 	if phone != nil {
 		current.Phone = phone
@@ -237,11 +251,22 @@ func (s *Store) UpdateProfile(ctx context.Context, userID int64, fullName *strin
 	if avatarURL != nil {
 		current.AvatarURL = avatarURL
 	}
+	if telegramUsername != nil {
+		current.TelegramUsername = blankToNil(telegramUsername)
+	}
+	if maxUsername != nil {
+		current.MaxUsername = blankToNil(maxUsername)
+	}
 
 	sql, args, err := psql.Update("auth.users").
-		Set("full_name", current.FullName).
+		Set("last_name", current.LastName).
+		Set("first_name", current.FirstName).
+		Set("middle_name", current.MiddleName).
+		Set("birth_date", current.BirthDate).
 		Set("phone", current.Phone).
 		Set("avatar_url", current.AvatarURL).
+		Set("telegram_username", current.TelegramUsername).
+		Set("max_username", current.MaxUsername).
 		Set("updated_at", sq.Expr("NOW()")).
 		Where(sq.Eq{"id": userID}).
 		Suffix("RETURNING " + userColumns()).
@@ -370,9 +395,14 @@ func scanUser(row pgx.Row) (User, error) {
 		&user.EmailVerifiedAt,
 		&user.PasswordHash,
 		&role,
-		&user.FullName,
+		&user.LastName,
+		&user.FirstName,
+		&user.MiddleName,
+		&user.BirthDate,
 		&user.Phone,
 		&user.AvatarURL,
+		&user.TelegramUsername,
+		&user.MaxUsername,
 		&user.Status,
 		&user.BlockedUntil,
 		&user.CreatedAt,
@@ -398,7 +428,7 @@ func insertRefreshSession(ctx context.Context, tx pgx.Tx, userID int64, refreshT
 }
 
 func userColumns() string {
-	return "id, email, email_verified_at, password_hash, role, full_name, phone, avatar_url, status, blocked_until, created_at, updated_at"
+	return "id, email, email_verified_at, password_hash, role, last_name, first_name, middle_name, birth_date, phone, avatar_url, telegram_username, max_username, status, blocked_until, created_at, updated_at"
 }
 
 func refreshSessionInsert(userID int64, refreshToken string, expiresAt time.Time) sq.InsertBuilder {
@@ -414,9 +444,14 @@ func activeRefreshSessionUserSelect(refreshToken string, forUpdate bool) sq.Sele
 		"u.email_verified_at",
 		"u.password_hash",
 		"u.role",
-		"u.full_name",
+		"u.last_name",
+		"u.first_name",
+		"u.middle_name",
+		"u.birth_date",
 		"u.phone",
 		"u.avatar_url",
+		"u.telegram_username",
+		"u.max_username",
 		"u.status",
 		"u.blocked_until",
 		"u.created_at",
@@ -454,6 +489,17 @@ func NormalizeEmail(email string) string {
 
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func blankToNil(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*value)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
 }
 
 func roleToDB(role commonv1.UserRole) string {

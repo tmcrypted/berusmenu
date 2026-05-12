@@ -61,9 +61,6 @@ func TestRegisterSuccess(t *testing.T) {
 			if req.GetRole() != commonv1.UserRole_USER_ROLE_OWNER {
 				t.Errorf("role = %s, want owner", req.GetRole())
 			}
-			if req.GetFullName() != "" {
-				t.Errorf("full_name = %q, want empty", req.GetFullName())
-			}
 			return &authv1.RegisterResponse{Auth: sampleAuthPayload(false)}, nil
 		},
 	)
@@ -262,7 +259,7 @@ func TestProtectedUnsafeEndpointRequiresCSRF(t *testing.T) {
 	}, nil)
 
 	router := newTestRouter(client)
-	req := httptest.NewRequest(http.MethodPatch, "/v1/me", strings.NewReader(`{"full_name":"New Name"}`))
+	req := httptest.NewRequest(http.MethodPatch, "/v1/me", strings.NewReader(`{"first_name":"Ivan"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(&http.Cookie{Name: "berusmenu_access", Value: "access"})
 	rec := httptest.NewRecorder()
@@ -393,10 +390,10 @@ func TestUpdateMeSendsOnlyProvidedFields(t *testing.T) {
 
 	client.EXPECT().UpdateProfile(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(ctx context.Context, req *authv1.UpdateProfileRequest, opts ...grpc.CallOption) (*authv1.UpdateProfileResponse, error) {
-			if req.FullName == nil || req.GetFullName() != "New Name" {
-				t.Errorf("full_name = %v, want New Name", req.FullName)
+			if req.FirstName == nil || req.GetFirstName() != "Ivan" {
+				t.Errorf("first_name = %v, want Ivan", req.FirstName)
 			}
-			if req.Phone != nil || req.AvatarUrl != nil {
+			if req.Phone != nil || req.AvatarUrl != nil || req.LastName != nil {
 				t.Errorf("unexpected optional fields: %+v", req)
 			}
 			return &authv1.UpdateProfileResponse{User: sampleUser(true)}, nil
@@ -405,7 +402,7 @@ func TestUpdateMeSendsOnlyProvidedFields(t *testing.T) {
 
 	router := newTestRouter(client)
 
-	rec := doJSON(router, http.MethodPatch, "/v1/me", `{"full_name":"New Name"}`, "access")
+	rec := doJSON(router, http.MethodPatch, "/v1/me", `{"first_name":"Ivan"}`, "access")
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
@@ -488,7 +485,8 @@ func sampleUser(verified bool) *authv1.User {
 		Id:        7,
 		Email:     "worker@example.com",
 		Role:      commonv1.UserRole_USER_ROLE_WORKER,
-		FullName:  "Worker User",
+		LastName:  "User",
+		FirstName: "Worker",
 		CreatedAt: timestamppb.Now(),
 		UpdatedAt: timestamppb.Now(),
 	}

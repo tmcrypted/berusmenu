@@ -35,7 +35,7 @@ export function PvzCard({ pvz }: Props) {
 
       {pvz.status === "approved" ? (
         <p className="mt-4 text-sm text-[var(--muted)]">
-          ПВЗ одобрен. Создание вакансий появится после подключения matching-flow.
+          ПВЗ одобрен, можно публиковать смены.
         </p>
       ) : pvz.status === "blocked" ? (
         <p className="mt-4 text-sm text-[var(--muted)]">
@@ -44,6 +44,13 @@ export function PvzCard({ pvz }: Props) {
       ) : null}
 
       <div className="mt-5 flex flex-wrap gap-3">
+        {pvz.status === "approved" ? (
+          <Link href={`/owner/vacancies/new?pvz_id=${pvz.id}`}>
+            <Button type="button" className="rounded-xl">
+              Создать вакансию
+            </Button>
+          </Link>
+        ) : null}
         {canEdit ? (
           <Link href={`/owner/pvz/${pvz.id}/edit`}>
             <Button type="button" variant="secondary" className="rounded-xl">
